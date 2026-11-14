@@ -291,9 +291,15 @@ RÉDUCTION :
 - Une réduction de 100 % donne un montant égal à zéro.
 
 LIVRAISON :
+- Un montant négatif déclenche ValueError("Montant invalide").
 - La livraison est gratuite à partir de 500.
 - La livraison coûte 30 lorsque le montant est inférieur à 500.
-- Tester notamment les montants 499 et 500.
+- Tester obligatoirement les montants :
+  -1 : doit déclencher ValueError.
+  0 : doit retourner 30.
+  499 : doit retourner 30.
+  500 : doit retourner 0.
+  501 : doit retourner 0.
 
 VALIDATION CLIENT :
 - Un nom vide est invalide.
@@ -301,13 +307,69 @@ VALIDATION CLIENT :
 - Un email sans caractère @ est invalide.
 - Un client valide doit être accepté.
 
+APPLICATION DES RÉDUCTIONS :
+
+La fonction apply_discount(total, discount_percent)
+doit être testée avec les cas suivants :
+
+1. Montant négatif :
+   apply_discount(-1, 10) doit déclencher ValueError.
+
+2. Réduction négative :
+   apply_discount(100, -1) doit déclencher ValueError.
+
+3. Réduction supérieure à 100 :
+   apply_discount(100, 101) doit déclencher ValueError.
+
+4. Réduction égale à 0 :
+   apply_discount(100, 0) doit retourner 100.
+
+5. Réduction égale à 100 :
+   apply_discount(100, 100) doit retourner 0.
+
+6. Cas normal :
+   apply_discount(250, 10) doit retourner 225.
+
+Chaque cas doit être couvert par un test pytest distinct.
+Utiliser pytest.raises(ValueError) pour les cas invalides.
+
 CRÉATION DE COMMANDE :
-- Un client invalide doit déclencher ValueError.
-- Une commande valide doit retourner :
-  subtotal,
-  discounted_total,
-  shipping,
-  final_total.
+
+- Un client avec un nom vide doit déclencher ValueError.
+- Un client avec un email sans @ doit déclencher ValueError.
+- Un client valide doit permettre de créer une commande.
+
+Pour tester une commande valide, utiliser obligatoirement :
+
+items = [
+    {{"price": 100, "quantity": 2}},
+    {{"price": 50, "quantity": 1}}
+]
+
+customer = {{
+    "name": "John Doe",
+    "email": "test@example.com"
+}}
+
+Résultats attendus :
+
+- subtotal = 250
+- discounted_total = 225
+- shipping = 30
+- final_total = 255
+
+Pour tester un client invalide, utiliser obligatoirement :
+
+customer = {{
+    "name": "",
+    "email": "test@example.com"
+}}
+
+Ne jamais utiliser un client valide dans un test
+qui attend une exception ValueError.
+
+Ne jamais inventer des résultats numériques.
+Vérifier chaque calcul avant de générer les assertions.
 
 ============================================================
 7. CONSIGNES DE GÉNÉRATION
@@ -378,6 +440,23 @@ CRÉATION DE COMMANDE :
 
 23. Avant de répondre, relis chaque ligne d'assertion
     et vérifie sa syntaxe et sa logique.
+    
+24. Pour calculate_shipping, génère obligatoirement
+    un test vérifiant qu'un montant négatif déclenche ValueError.
+
+25. Pour chaque fonction, analyse toutes les conditions
+    if présentes dans le code source.
+
+26. Pour chaque condition, teste :
+    - Le cas où la condition est vraie.
+    - Le cas où la condition est fausse.
+    - Les valeurs limites lorsqu'elles existent.
+
+27. Ne considère pas une fonction comme suffisamment testée
+    simplement parce que son comportement nominal est couvert.
+
+28. Vérifie que chaque branche conditionnelle importante
+    possède au moins un test correspondant.
 
     ```python
     ...
@@ -501,16 +580,29 @@ def test_generator_agent(state):
     )
 
     # --------------------------------------------------------
-    # Étape 10 : mettre à jour l'état LangGraph
+    # Étape 10 : vérifier le contenu réellement enregistré
     # --------------------------------------------------------
 
-    state["generated_tests"] = generated_code
+    saved_code = generated_file.read_text(
+        encoding="utf-8"
+    ).strip()
 
-    state["generated_test_file"] = str(
-        generated_file.relative_to(BASE_DIR)
-    )
+    # Vérifier à nouveau le contenu du fichier
+    saved_test_functions = validate_generated_code(saved_code)
 
-    state["generated_test_count"] = len(test_functions)
+    if saved_code != generated_code.strip():
+        raise ValueError(
+            "Le contenu du fichier diffère du code généré."
+        )
+
+    # Préparer les mises à jour de l'état LangGraph
+    updated_state = {
+        "generated_tests": saved_code,
+        "generated_test_file": str(
+            generated_file.relative_to(BASE_DIR)
+        ),
+        "generated_test_count": len(saved_test_functions)
+    }
 
     # --------------------------------------------------------
     # Étape 11 : afficher le résumé
@@ -531,4 +623,4 @@ def test_generator_agent(state):
 
     print("\n=====================================")
 
-    return state
+    return updated_state

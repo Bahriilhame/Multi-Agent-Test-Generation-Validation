@@ -25,38 +25,21 @@ def test_calculate_subtotal_zero_quantity():
     with pytest.raises(ValueError):
         calculate_subtotal(items)
 
-def test_calculate_subtotal_valid_items():
-    items = [
-        {"price": 100, "quantity": 2},
-        {"price": 50, "quantity": 1}
-    ]
-    assert calculate_subtotal(items) == 250
-
-def test_apply_discount_negative_total():
+def test_calculate_shipping_negative_amount():
     with pytest.raises(ValueError):
-        apply_discount(-250, 10)
+        calculate_shipping(-1)
 
-def test_apply_discount_invalid_discount():
-    with pytest.raises(ValueError):
-        apply_discount(250, 105)
+def test_calculate_shipping_zero_amount():
+    assert calculate_shipping(0) == 30
 
-def test_apply_discount_zero_discount():
-    assert apply_discount(250, 0) == 250
-
-def test_apply_discount_full_discount():
-    assert apply_discount(250, 100) == 0
-
-def test_calculate_shipping_free_shipping():
-    assert calculate_shipping(500) == 0
-
-def test_calculate_shipping_standard_shipping():
+def test_calculate_shipping_499_amount():
     assert calculate_shipping(499) == 30
 
-def test_calculate_shipping_free_shipping_limit():
+def test_calculate_shipping_500_amount():
     assert calculate_shipping(500) == 0
 
-def test_calculate_shipping_standard_shipping_limit():
-    assert calculate_shipping(499) == 30
+def test_calculate_shipping_501_amount():
+    assert calculate_shipping(501) == 0
 
 def test_validate_customer_empty_name():
     customer = {
@@ -108,3 +91,24 @@ def test_create_order_valid_order():
     assert order["discounted_total"] == 225
     assert order["shipping"] == 30
     assert order["final_total"] == 255
+
+def test_apply_discount_negative_amount():
+    with pytest.raises(ValueError):
+        apply_discount(-1, 10)
+
+def test_apply_discount_negative_discount():
+    with pytest.raises(ValueError):
+        apply_discount(100, -1)
+
+def test_apply_discount_high_discount():
+    with pytest.raises(ValueError):
+        apply_discount(100, 101)
+
+def test_apply_discount_zero_discount():
+    assert apply_discount(100, 0) == 100
+
+def test_apply_discount_full_discount():
+    assert apply_discount(100, 100) == 0
+
+def test_apply_discount_normal_discount():
+    assert apply_discount(250, 10) == 225
