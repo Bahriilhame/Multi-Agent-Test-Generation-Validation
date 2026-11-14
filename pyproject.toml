@@ -1,29 +1,18 @@
-[build-system]
-requires = ["setuptools>=75", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "swebench-testgen"
-version = "0.1.0"
-description = "Multi-agent test generation research prototype for SWE-bench Lite repositories"
-requires-python = ">=3.11,<3.13"
-dependencies = [
-  "coverage==7.10.7",
-  "datasets==4.4.1",
-  "langgraph==1.2.20",
-  "pydantic==2.12.4",
-  "pytest==8.4.2",
-  "pytest-cov==7.0.0",
-  "swebench==4.1.0",
-]
-
-[project.optional-dependencies]
-dev = ["pytest==8.4.2"]
-
-[tool.setuptools.packages.find]
-where = ["src"]
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-ra"
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v"
 
+[tool.coverage.run]
+source = ["shop"]
+branch = true
+omit = [
+    "*/__init__.py"
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

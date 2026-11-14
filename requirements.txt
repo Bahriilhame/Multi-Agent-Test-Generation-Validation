@@ -1,0 +1,17 @@
+
+# Tests et couverture
+pytest
+pytest-cov
+coverage
+
+# IA agentique
+langgraph
+langchain
+langchain-ollama
+
+# Configuration et validation
+python-dotenv
+pydantic
+
+# Mutation testing
+mutmut
