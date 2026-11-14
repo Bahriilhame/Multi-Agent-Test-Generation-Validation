@@ -7,6 +7,7 @@ from config.settings import (
     BASE_DIR,
     PROJECT_DIR,
     TESTS_DIR,
+    GENERATED_TESTS_DIR,
     REPORTS_DIR
 )
 
@@ -39,6 +40,7 @@ def coverage_agent(state):
         "-m",
         "pytest",
         str(TESTS_DIR),
+        "--ignore=" + str(GENERATED_TESTS_DIR),
         f"--cov={coverage_target}",
         f"--cov-report=json:{report_path}",
         "--cov-report=term-missing"
