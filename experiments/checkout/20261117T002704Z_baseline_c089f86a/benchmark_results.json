@@ -1,0 +1,34 @@
+{
+  "run_id": "20261117T002704Z_baseline_c089f86a",
+  "benchmark": "checkout",
+  "mode": "baseline",
+  "status": "passed",
+  "coverage_before": 42.10526315789474,
+  "coverage_after": 42.10526315789474,
+  "coverage_delta_percentage_points": 0,
+  "branch_coverage_before": 35.0,
+  "branch_coverage_after": 35.0,
+  "test_results": {
+    "passed": 3,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "duration_seconds": 3.921,
+    "coverage": {
+      "covered_lines": 17,
+      "num_statements": 37,
+      "percent_covered": 42.10526315789474,
+      "percent_covered_display": "42",
+      "missing_lines": 20,
+      "excluded_lines": 0,
+      "percent_statements_covered": 45.945945945945944,
+      "percent_statements_covered_display": "46",
+      "num_branches": 20,
+      "num_partial_branches": 3,
+      "covered_branches": 7,
+      "missing_branches": 13,
+      "percent_branches_covered": 35.0,
+      "percent_branches_covered_display": "35"
+    }
+  }
+}

@@ -3,6 +3,7 @@ import json
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 from config.settings import (
@@ -13,10 +14,10 @@ from config.settings import (
 )
 
 
-def prepare_runtime(generated_test_file):
+def prepare_runtime(generated_test_file, run_dir=None):
     """Prépare uniquement les fichiers autorisés pour Docker."""
 
-    runtime_dir = BASE_DIR / "sandbox" / "runtime"
+    runtime_dir = Path(run_dir) / "runtime" if run_dir else BASE_DIR / "sandbox" / "runtime"
     app_dir = runtime_dir / "app"
     results_dir = runtime_dir / "results"
 
@@ -68,6 +69,24 @@ def prepare_runtime(generated_test_file):
 def run_docker_tests(app_dir, results_dir):
     """Exécute les tests dans le conteneur isolé."""
 
+    dockerfile = BASE_DIR / "sandbox" / "runner" / "Dockerfile"
+    build = subprocess.run(
+        [
+            "docker", "build", "-t", "smarttest-runner:latest",
+            "-f", str(dockerfile), str(dockerfile.parent),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=600,
+    )
+    if build.returncode:
+        raise RuntimeError(
+            "Échec de construction de l'image Docker smarttest-runner:latest\n"
+            + build.stdout + "\n" + build.stderr
+        )
+
     app_path = str(app_dir.resolve())
     results_path = str(results_dir.resolve())
 
@@ -88,6 +107,7 @@ def run_docker_tests(app_dir, results_dir):
         "--mount",
         f"type=bind,source={results_path},target=/tmp/test-results",
 
+        "-e", "PYTEST_ADDOPTS=--cov-branch",
         "smarttest-runner:latest"
     ]
 
@@ -125,7 +145,10 @@ def read_coverage_report(results_dir):
         "percent_covered": totals.get("percent_covered", 0),
         "num_statements": totals.get("num_statements", 0),
         "missing_lines": totals.get("missing_lines", 0),
-        "covered_lines": totals.get("covered_lines", 0)
+        "covered_lines": totals.get("covered_lines", 0),
+        "percent_branches_covered": totals.get("percent_branches_covered", 0),
+        "covered_branches": totals.get("covered_branches", 0),
+        "num_branches": totals.get("num_branches", 0)
     }
 
 
@@ -161,15 +184,17 @@ def validation_agent(state):
     if not generated_test_file:
         raise ValueError("Aucun fichier de tests générés fourni.")
 
-    app_dir, results_dir = prepare_runtime(generated_test_file)
+    app_dir, results_dir = prepare_runtime(generated_test_file, state.get("run_dir"))
 
     print("[Agent 3] Fichiers préparés.")
     print("[Agent 3] Lancement des tests dans Docker...")
 
+    started = time.perf_counter()
     exit_code, output = run_docker_tests(
         app_dir,
         results_dir
     )
+    duration_seconds = round(time.perf_counter() - started, 3)
 
     test_results = parse_test_results(output)
     coverage = read_coverage_report(results_dir)
@@ -177,8 +202,10 @@ def validation_agent(state):
     if coverage is None:
         validation_status = "error"
         coverage_after = 0
+        branch_coverage_after = 0
     else:
         coverage_after = coverage["percent_covered"]
+        branch_coverage_after = coverage["percent_branches_covered"]
         validation_status = (
             "passed" if exit_code == 0 else "failed"
         )
@@ -193,16 +220,23 @@ def validation_agent(state):
     else:
         print("Rapport de couverture indisponible.")
 
+    if state.get("run_dir"):
+        (Path(state["run_dir"]) / "logs" / "docker_pytest.txt").write_text(
+            output, encoding="utf-8"
+        )
+
     return {
         "test_exit_code": exit_code,
         "test_results": {
             **test_results,
             "output": output,
-            "coverage": coverage
+            "coverage": coverage,
+            "duration_seconds": duration_seconds,
         },
         "coverage_after": coverage_after,
+        "branch_coverage_after": branch_coverage_after if coverage else 0,
         "validation_status": validation_status,
-        "coverage_report_path": str(
-            results_dir / "coverage_after.json"
-        )
+        "coverage_report_path": str(results_dir / "coverage_after.json"),
+        "coverage_after_report_path": str(results_dir / "coverage_after.json"),
+        "generated_test_count": state.get("generated_test_count", 0),
     }

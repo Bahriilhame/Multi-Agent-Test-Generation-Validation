@@ -6,3 +6,8 @@ htmlcov/
 .env
 *.pyc
 .mutmut-cache/
+
+# Runtime outputs are generated locally; commit curated reports separately if needed.
+experiments/*/*/runtime/
+experiments/*/*/logs/
+experiments/*/*/generated_tests/

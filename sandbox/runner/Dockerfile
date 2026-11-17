@@ -22,4 +22,4 @@ ENV COVERAGE_FILE=/tmp/test-results/.coverage
 USER tester
 
 # Exécuter les tests et produire le rapport de couverture
-CMD ["python", "-m", "pytest", "/app/tests", "-v", "-p", "no:cacheprovider", "--cov=shop.checkout", "--cov-report=json:/tmp/test-results/coverage_after.json", "--cov-report=term-missing"]
+CMD ["python", "-m", "pytest", "/app/tests", "-v", "-p", "no:cacheprovider", "--cov=shop.checkout", "--cov-branch", "--cov-report=json:/tmp/test-results/coverage_after.json", "--cov-report=term-missing"]

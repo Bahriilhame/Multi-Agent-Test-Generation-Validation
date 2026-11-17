@@ -1,5 +1,6 @@
 
 import json
+from pathlib import Path
 import subprocess
 import sys
 
@@ -30,7 +31,10 @@ def coverage_agent(state):
     # 2. Créer le dossier des rapports
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    report_path = REPORTS_DIR / "coverage_before.json"
+    report_path = (
+        Path(state["run_dir"]) / "coverage_before.json"
+        if state.get("run_dir") else REPORTS_DIR / "coverage_before.json"
+    )
 
     # 3. Préparer la commande pytest avec coverage
     coverage_target = PROJECT_DIR.relative_to(BASE_DIR).as_posix()
@@ -42,6 +46,7 @@ def coverage_agent(state):
         str(TESTS_DIR),
         "--ignore=" + str(GENERATED_TESTS_DIR),
         f"--cov={coverage_target}",
+        "--cov-branch",
         f"--cov-report=json:{report_path}",
         "--cov-report=term-missing"
     ]
@@ -73,6 +78,11 @@ def coverage_agent(state):
     # 6. Lire le rapport JSON
     with open(report_path, "r", encoding="utf-8") as file:
         report = json.load(file)
+
+    if state.get("run_dir"):
+        (Path(state["run_dir"]) / "logs" / "coverage_baseline.txt").write_text(
+            result.stdout + "\n" + result.stderr, encoding="utf-8"
+        )
 
     # 7. Récupérer le taux global de couverture
     totals = report.get("totals", {})
@@ -117,6 +127,9 @@ def coverage_agent(state):
     # 9. Ajouter les résultats à l'état partagé
     state["coverage_before"] = round(
         coverage_percent, 2
+    )
+    state["branch_coverage_before"] = round(
+        totals.get("percent_branches_covered", 0.0), 2
     )
 
     state["uncovered_functions"] = uncovered_functions

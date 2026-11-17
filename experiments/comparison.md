@@ -1,0 +1,7 @@
+# Comparaison des expériences
+
+| benchmark | mode | run_id | status | coverage_before | coverage_after | coverage_delta_percentage_points | branch_coverage_before | branch_coverage_after |
+|---|---|---|---|---|---|---|---|---|
+| checkout | baseline | 20261117T002704Z_baseline_c089f86a | passed | 42.10526315789474 | 42.10526315789474 | 0 | 35.0 | 35.0 |
+| checkout | multiagent | 20261117T003846Z_multiagent_49f647e9 | critic_error | 42.11 | 100.0 | 57.89 | 35.0 | 100.0 |
+| checkout | multiagent | 20261117T004925Z_multiagent_2111cadf | passed | 42.11 | 100.0 | 57.89 | 35.0 | 100.0 |

@@ -1,6 +1,7 @@
 
 import ast
 import re
+from pathlib import Path
 
 from config.settings import (
     BASE_DIR,
@@ -570,8 +571,10 @@ def test_generator_agent(state):
     # Étape 9 : enregistrer les tests générés
     # --------------------------------------------------------
 
+    run_dir = state.get("run_dir")
     generated_file = (
-        GENERATED_TESTS_DIR / "test_generated_checkout.py"
+        Path(run_dir) / "generated_tests" / "test_generated_checkout.py"
+        if run_dir else GENERATED_TESTS_DIR / "test_generated_checkout.py"
     )
 
     generated_file.write_text(

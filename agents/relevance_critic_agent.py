@@ -942,6 +942,39 @@ def calculate_relevance_score(
     }
 
 
+def relevance_critic_agent(state):
+    """Evaluate generated test relevance and attach a serializable summary."""
+    test_file = Path(state["generated_test_file"])
+    if not test_file.is_absolute():
+        from config.settings import BASE_DIR
+        test_file = BASE_DIR / test_file
+    source_file = PROJECT_DIR / "checkout.py"
+    ast_result = analyze_test_file(test_file)
+    semantic_result = analyze_test_relevance(source_file, test_file)
+    score_result = calculate_relevance_score(ast_result, semantic_result)
+    summary = {
+        "valid": semantic_result.get("valid"),
+        "score": score_result.get("score"),
+        "status": score_result.get("status"),
+        "details": score_result.get("details"),
+        "statistics": score_result.get("statistics"),
+        "feedback": semantic_result.get("report"),
+        "validation_errors": semantic_result.get("validation_errors", []),
+    }
+    print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))
+    run_dir = state.get("run_dir")
+    if run_dir:
+        (Path(run_dir) / "critic_result.json").write_text(
+            json.dumps(summary, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
+    return {
+        "critic_result": summary,
+        "relevance_score": score_result.get("score"),
+        "relevance_feedback": score_result.get("status", "incomplete"),
+    }
+
+
 # ============================================================
 # 9. EXÉCUTION INDIVIDUELLE
 # ============================================================
