@@ -33,6 +33,14 @@ Chaque commande crée un identifiant unique et stocke ses résultats dans `exper
 
    Les fichiers `experiments/comparison.csv` et `experiments/comparison.md` sont régénérables à partir des résultats individuels.
 
+4. Mutation testing sur le dernier run multi-agent réussi, comparé aux seuls tests écrits à la main :
+
+   ```powershell
+   python -m experiments.run_mutation
+   ```
+
+   `mutmut` s'exécute dans un conteneur Linux, car son exécution native Windows n'est pas prise en charge. Le rapport se trouve dans `experiments/checkout/<run_id>/mutation_report.md`; les résultats bruts et journaux restent dans le même dossier. Le premier lancement construit une image Docker et nécessite l'accès réseau pour installer `mutmut`.
+
 ## Métriques
 
 - Couverture des lignes et des branches avant/après, mesurées par coverage.py avec la même configuration.

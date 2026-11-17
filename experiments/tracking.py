@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import ast
 import os
 import platform
 import subprocess
@@ -92,7 +93,41 @@ def finalize_run(state: dict[str, Any], status: str = "completed") -> None:
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     metadata["finished_at"] = datetime.now(timezone.utc).isoformat()
     metadata["status"] = status
+    metadata["stage"] = state.get("run_stage", "finalized")
     save_json(metadata_path, metadata)
+
+    # Recover artifacts written before an exception interrupted the workflow.
+    if state.get("coverage_report_path") is None:
+        candidate = run_dir / "coverage_before.json"
+        if candidate.exists():
+            state["coverage_report_path"] = str(candidate)
+            try:
+                totals = json.loads(candidate.read_text(encoding="utf-8")).get("totals", {})
+                state.setdefault("coverage_before", totals.get("percent_covered"))
+                state.setdefault("branch_coverage_before", totals.get("percent_branches_covered"))
+            except (OSError, json.JSONDecodeError):
+                pass
+    if not state.get("generated_test_file"):
+        generated = run_dir / "generated_tests" / "test_generated_checkout.py"
+        if generated.exists():
+            state["generated_test_file"] = str(generated)
+            try:
+                tree = ast.parse(generated.read_text(encoding="utf-8"))
+                count = sum(
+                    isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and node.name.startswith("test_")
+                    for node in ast.walk(tree)
+                )
+                state.setdefault("generated_test_count", count)
+            except (OSError, SyntaxError):
+                pass
+    if state.get("critic_result") is None:
+        critic_path = run_dir / "critic_result.json"
+        if critic_path.exists():
+            try:
+                state["critic_result"] = json.loads(critic_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                pass
 
     for key, filename in (
         ("coverage_report_path", "coverage_before.json"),
@@ -116,6 +151,8 @@ def finalize_run(state: dict[str, Any], status: str = "completed") -> None:
         "benchmark": metadata.get("benchmark"),
         "mode": metadata.get("mode"),
         "status": state.get("validation_status", status),
+        "stage": state.get("run_stage", "completed" if status == "passed" else "incomplete"),
+        "error": state.get("run_error"),
         "coverage_before": before,
         "coverage_after": after,
         "coverage_delta_percentage_points": round(after - before, 2)
@@ -136,6 +173,9 @@ def finalize_run(state: dict[str, Any], status: str = "completed") -> None:
 
 
 def _write_markdown(path: Path, metadata: dict[str, Any], results: dict[str, Any]) -> None:
+    def shown(value: Any) -> str:
+        return "non mesuré" if value is None else str(value)
+
     lines = [
         f"# Expérience {metadata['run_id']}", "",
         f"- Benchmark : `{metadata['benchmark']}`",
@@ -146,9 +186,9 @@ def _write_markdown(path: Path, metadata: dict[str, Any], results: dict[str, Any
         "## Résultats", "",
         "| Mesure | Avant | Après | Écart |",
         "|---|---:|---:|---:|",
-        f"| Couverture lignes (%) | {results.get('coverage_before')} | {results.get('coverage_after')} | {results.get('coverage_delta_percentage_points')} |",
-        f"| Couverture branches (%) | {results.get('branch_coverage_before')} | {results.get('branch_coverage_after')} | — |",
-        f"| Score critique (sur 100) | — | {results.get('relevance_score')} | — |",
+        f"| Couverture lignes (%) | {shown(results.get('coverage_before'))} | {shown(results.get('coverage_after'))} | {shown(results.get('coverage_delta_percentage_points'))} |",
+        f"| Couverture branches (%) | {shown(results.get('branch_coverage_before'))} | {shown(results.get('branch_coverage_after'))} | — |",
+        f"| Score critique (sur 100) | — | {shown(results.get('relevance_score'))} | — |",
         "",
         "> La couverture indique les lignes/branches exécutées. Elle ne prouve pas à elle seule que les tests détectent les défauts.",
         "", "## Résultats pytest", "", "```json",

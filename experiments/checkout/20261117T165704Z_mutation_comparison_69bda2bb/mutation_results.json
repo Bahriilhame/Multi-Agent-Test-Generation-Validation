@@ -1,0 +1,94 @@
+{
+  "run_id": "20261117T165704Z_mutation_comparison_69bda2bb",
+  "benchmark": "checkout",
+  "status": "completed",
+  "tool": "mutmut",
+  "cases": {
+    "baseline": {
+      "status": "completed",
+      "exit_code": 0,
+      "stats_exit_code": 0,
+      "duration_seconds": 22.361,
+      "stats": {
+        "killed": 21,
+        "survived": 24,
+        "total": 95,
+        "no_tests": 50,
+        "skipped": 0,
+        "suspicious": 0,
+        "timeout": 0,
+        "check_was_interrupted_by_user": 0,
+        "segfault": 0
+      },
+      "run_output_tail": " mutated, 0 ignored, 0 unmodified)\n\n⠸ Running stats     \n⠼ Running stats\n⠴ Running stats\n⠦ Running stats\n⠧ Running stats\n⠇ Running stats\n⠏ Running stats\n⠋ Running stats\n    done\n\n⠙ Running clean tests\n⠹ Running clean tests\n⠸ Running clean tests\n⠼ Running clean tests\n⠴ Running clean tests\n⠦ Running clean tests\n⠧ Running clean tests\n⠇ Running clean tests\n    done\n\n⠏ Running forced fail test\n⠋ Running forced fail test\n⠙ Running forced fail test\n⠹ Running forced fail test\n⠸ Running forced fail test\n⠼ Running forced fail test\n⠴ Running forced fail test\n⠦ Running forced fail test\n⠧ Running forced fail test\n⠇ Running forced fail test\n⠏ Running forced fail test\n⠋ Running forced fail test\n⠙ Running forced fail test\n⠹ Running forced fail test\n⠸ Running forced fail test\n⠼ Running forced fail test\n    done\nRunning mutation testing\n\n⠴ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 1/95  🎉 0 🫥 1  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 2/95  🎉 0 🫥 2  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 3/95  🎉 0 🫥 3  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 4/95  🎉 0 🫥 4  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 5/95  🎉 0 🫥 5  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 6/95  🎉 0 🫥 6  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 7/95  🎉 0 🫥 7  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠸ 8/95  🎉 0 🫥 8  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠼ 9/95  🎉 0 🫥 9  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠴ 10/95  🎉 0 🫥 10  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 11/95  🎉 0 🫥 11  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 12/95  🎉 0 🫥 12  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 13/95  🎉 0 🫥 13  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 14/95  🎉 0 🫥 14  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 15/95  🎉 0 🫥 15  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 16/95  🎉 0 🫥 16  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 17/95  🎉 0 🫥 17  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠸ 18/95  🎉 0 🫥 18  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠼ 19/95  🎉 0 🫥 19  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠴ 20/95  🎉 0 🫥 20  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 21/95  🎉 0 🫥 21  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 22/95  🎉 0 🫥 22  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 23/95  🎉 0 🫥 23  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 24/95  🎉 0 🫥 24  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 25/95  🎉 0 🫥 25  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 26/95  🎉 0 🫥 26  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 27/95  🎉 0 🫥 27  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠸ 28/95  🎉 0 🫥 28  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠼ 29/95  🎉 0 🫥 29  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠴ 30/95  🎉 0 🫥 30  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 31/95  🎉 0 🫥 31  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 32/95  🎉 0 🫥 32  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 33/95  🎉 0 🫥 33  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 34/95  🎉 0 🫥 34  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 35/95  🎉 0 🫥 35  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 36/95  🎉 0 🫥 36  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 37/95  🎉 0 🫥 37  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠸ 38/95  🎉 0 🫥 38  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠼ 39/95  🎉 0 🫥 39  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠴ 40/95  🎉 0 🫥 40  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 41/95  🎉 0 🫥 41  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 42/95  🎉 0 🫥 42  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 43/95  🎉 0 🫥 43  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 44/95  🎉 0 🫥 44  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 45/95  🎉 0 🫥 45  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 46/95  🎉 0 🫥 46  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 47/95  🎉 0 🫥 47  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠸ 48/95  🎉 0 🫥 48  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠼ 49/95  🎉 0 🫥 49  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠴ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠸ 50/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠼ 51/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 1  🔇 0  🧙 0\n⠴ 52/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 2  🔇 0  🧙 0\n⠦ 53/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 3  🔇 0  🧙 0\n⠧ 54/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠇ 55/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 5  🔇 0  🧙 0\n⠏ 56/95  🎉 0 🫥 50  ⏰ 0  🤔 0  🙁 6  🔇 0  🧙 0\n⠋ 57/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 6  🔇 0  🧙 0\n⠙ 58/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 7  🔇 0  🧙 0\n⠹ 59/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠸ 60/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 9  🔇 0  🧙 0\n⠼ 61/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 10  🔇 0  🧙 0\n⠴ 62/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 11  🔇 0  🧙 0\n⠦ 63/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 12  🔇 0  🧙 0\n⠧ 64/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 13  🔇 0  🧙 0\n⠇ 65/95  🎉 1 🫥 50  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠏ 66/95  🎉 2 🫥 50  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠋ 67/95  🎉 3 🫥 50  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠙ 68/95  🎉 4 🫥 50  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠹ 69/95  🎉 5 🫥 50  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠸ 70/95  🎉 6 🫥 50  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠼ 71/95  🎉 7 🫥 50  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠴ 72/95  🎉 7 🫥 50  ⏰ 0  🤔 0  🙁 15  🔇 0  🧙 0\n⠦ 73/95  🎉 7 🫥 50  ⏰ 0  🤔 0  🙁 16  🔇 0  🧙 0\n⠧ 74/95  🎉 7 🫥 50  ⏰ 0  🤔 0  🙁 17  🔇 0  🧙 0\n⠇ 75/95  🎉 7 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠏ 76/95  🎉 8 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠋ 77/95  🎉 9 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠙ 78/95  🎉 10 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠹ 79/95  🎉 11 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠸ 80/95  🎉 12 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠼ 81/95  🎉 13 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠴ 82/95  🎉 14 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠦ 83/95  🎉 15 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠧ 84/95  🎉 16 🫥 50  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠇ 85/95  🎉 16 🫥 50  ⏰ 0  🤔 0  🙁 19  🔇 0  🧙 0\n⠏ 86/95  🎉 16 🫥 50  ⏰ 0  🤔 0  🙁 20  🔇 0  🧙 0\n⠋ 95/95  🎉 21 🫥 50  ⏰ 0  🤔 0  🙁 24  🔇 0  🧙 0\n3.57 mutations/second\n\n",
+      "stats_output": "Saved CI/CD stats to mutants/mutmut-cicd-stats.json\n\n",
+      "score": {
+        "killed": 21,
+        "survived": 24,
+        "timeout": 0,
+        "suspicious": 0,
+        "skipped": 0,
+        "no_tests": 50,
+        "total": 45,
+        "score_percent": 46.67,
+        "raw": {
+          "killed": 21,
+          "survived": 24,
+          "total": 95,
+          "no_tests": 50,
+          "skipped": 0,
+          "suspicious": 0,
+          "timeout": 0,
+          "check_was_interrupted_by_user": 0,
+          "segfault": 0
+        },
+        "generated_total": 95,
+        "score_all_generated_percent": 22.11
+      }
+    },
+    "multiagent": {
+      "status": "completed",
+      "exit_code": 0,
+      "stats_exit_code": 0,
+      "duration_seconds": 37.281,
+      "stats": {
+        "killed": 67,
+        "survived": 28,
+        "total": 95,
+        "no_tests": 0,
+        "skipped": 0,
+        "suspicious": 0,
+        "timeout": 0,
+        "check_was_interrupted_by_user": 0,
+        "segfault": 0
+      },
+      "run_output_tail": "s\n⠹ Running clean tests\n⠸ Running clean tests\n⠼ Running clean tests\n⠴ Running clean tests\n⠦ Running clean tests\n⠧ Running clean tests\n⠇ Running clean tests\n⠏ Running clean tests\n⠋ Running clean tests\n⠙ Running clean tests\n⠹ Running clean tests\n⠸ Running clean tests\n⠼ Running clean tests\n⠴ Running clean tests\n⠦ Running clean tests\n⠧ Running clean tests\n⠇ Running clean tests\n    done\n\n⠏ Running forced fail test\n⠋ Running forced fail test\n⠙ Running forced fail test\n⠹ Running forced fail test\n⠸ Running forced fail test\n⠼ Running forced fail test\n⠴ Running forced fail test\n⠦ Running forced fail test\n⠧ Running forced fail test\n⠇ Running forced fail test\n⠏ Running forced fail test\n⠋ Running forced fail test\n⠙ Running forced fail test\n⠹ Running forced fail test\n⠸ Running forced fail test\n⠼ Running forced fail test\n    done\nRunning mutation testing\n\n⠴ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠸ 0/95  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠼ 1/95  🎉 1 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠴ 2/95  🎉 2 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠦ 3/95  🎉 3 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠧ 4/95  🎉 4 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠇ 5/95  🎉 5 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠏ 6/95  🎉 6 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠋ 7/95  🎉 7 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠙ 8/95  🎉 8 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0  🧙 0\n⠹ 9/95  🎉 8 🫥 0  ⏰ 0  🤔 0  🙁 1  🔇 0  🧙 0\n⠸ 10/95  🎉 8 🫥 0  ⏰ 0  🤔 0  🙁 2  🔇 0  🧙 0\n⠼ 11/95  🎉 8 🫥 0  ⏰ 0  🤔 0  🙁 3  🔇 0  🧙 0\n⠴ 12/95  🎉 8 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠦ 13/95  🎉 9 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠧ 14/95  🎉 10 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠇ 15/95  🎉 11 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠏ 16/95  🎉 12 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠋ 17/95  🎉 13 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠙ 18/95  🎉 14 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠹ 19/95  🎉 15 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠸ 20/95  🎉 16 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠼ 21/95  🎉 17 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠴ 22/95  🎉 18 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠦ 23/95  🎉 19 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠧ 24/95  🎉 20 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠇ 25/95  🎉 21 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠏ 26/95  🎉 22 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠋ 27/95  🎉 23 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠙ 28/95  🎉 24 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠹ 29/95  🎉 25 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠸ 30/95  🎉 26 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠼ 31/95  🎉 27 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠴ 32/95  🎉 28 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠦ 33/95  🎉 29 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠧ 34/95  🎉 30 🫥 0  ⏰ 0  🤔 0  🙁 4  🔇 0  🧙 0\n⠇ 35/95  🎉 30 🫥 0  ⏰ 0  🤔 0  🙁 5  🔇 0  🧙 0\n⠏ 36/95  🎉 30 🫥 0  ⏰ 0  🤔 0  🙁 6  🔇 0  🧙 0\n⠋ 37/95  🎉 30 🫥 0  ⏰ 0  🤔 0  🙁 7  🔇 0  🧙 0\n⠙ 38/95  🎉 30 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠹ 39/95  🎉 31 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠸ 40/95  🎉 32 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠼ 41/95  🎉 33 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠴ 42/95  🎉 34 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠦ 43/95  🎉 35 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠧ 44/95  🎉 36 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠇ 45/95  🎉 37 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠏ 46/95  🎉 38 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠋ 47/95  🎉 39 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠙ 48/95  🎉 40 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠹ 49/95  🎉 41 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠸ 50/95  🎉 42 🫥 0  ⏰ 0  🤔 0  🙁 8  🔇 0  🧙 0\n⠼ 51/95  🎉 42 🫥 0  ⏰ 0  🤔 0  🙁 9  🔇 0  🧙 0\n⠴ 52/95  🎉 42 🫥 0  ⏰ 0  🤔 0  🙁 10  🔇 0  🧙 0\n⠦ 53/95  🎉 42 🫥 0  ⏰ 0  🤔 0  🙁 11  🔇 0  🧙 0\n⠧ 54/95  🎉 42 🫥 0  ⏰ 0  🤔 0  🙁 12  🔇 0  🧙 0\n⠇ 55/95  🎉 42 🫥 0  ⏰ 0  🤔 0  🙁 13  🔇 0  🧙 0\n⠏ 56/95  🎉 42 🫥 0  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠋ 57/95  🎉 43 🫥 0  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠙ 58/95  🎉 44 🫥 0  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠹ 59/95  🎉 45 🫥 0  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠸ 60/95  🎉 46 🫥 0  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠼ 61/95  🎉 47 🫥 0  ⏰ 0  🤔 0  🙁 14  🔇 0  🧙 0\n⠴ 62/95  🎉 47 🫥 0  ⏰ 0  🤔 0  🙁 15  🔇 0  🧙 0\n⠦ 63/95  🎉 47 🫥 0  ⏰ 0  🤔 0  🙁 16  🔇 0  🧙 0\n⠧ 64/95  🎉 47 🫥 0  ⏰ 0  🤔 0  🙁 17  🔇 0  🧙 0\n⠇ 65/95  🎉 47 🫥 0  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠏ 66/95  🎉 48 🫥 0  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠋ 67/95  🎉 49 🫥 0  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠙ 68/95  🎉 50 🫥 0  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠹ 69/95  🎉 51 🫥 0  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠸ 70/95  🎉 52 🫥 0  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠼ 71/95  🎉 53 🫥 0  ⏰ 0  🤔 0  🙁 18  🔇 0  🧙 0\n⠴ 72/95  🎉 53 🫥 0  ⏰ 0  🤔 0  🙁 19  🔇 0  🧙 0\n⠦ 73/95  🎉 53 🫥 0  ⏰ 0  🤔 0  🙁 20  🔇 0  🧙 0\n⠧ 74/95  🎉 53 🫥 0  ⏰ 0  🤔 0  🙁 21  🔇 0  🧙 0\n⠇ 75/95  🎉 53 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠏ 76/95  🎉 54 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠋ 77/95  🎉 55 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠙ 78/95  🎉 56 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠹ 79/95  🎉 57 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠸ 80/95  🎉 58 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠼ 81/95  🎉 59 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠴ 82/95  🎉 60 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠦ 83/95  🎉 61 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠧ 84/95  🎉 62 🫥 0  ⏰ 0  🤔 0  🙁 22  🔇 0  🧙 0\n⠇ 85/95  🎉 62 🫥 0  ⏰ 0  🤔 0  🙁 23  🔇 0  🧙 0\n⠏ 86/95  🎉 63 🫥 0  ⏰ 0  🤔 0  🙁 23  🔇 0  🧙 0\n⠋ 95/95  🎉 67 🫥 0  ⏰ 0  🤔 0  🙁 28  🔇 0  🧙 0\n4.16 mutations/second\n\n",
+      "stats_output": "Saved CI/CD stats to mutants/mutmut-cicd-stats.json\n\n",
+      "score": {
+        "killed": 67,
+        "survived": 28,
+        "timeout": 0,
+        "suspicious": 0,
+        "skipped": 0,
+        "no_tests": 0,
+        "total": 95,
+        "score_percent": 70.53,
+        "raw": {
+          "killed": 67,
+          "survived": 28,
+          "total": 95,
+          "no_tests": 0,
+          "skipped": 0,
+          "suspicious": 0,
+          "timeout": 0,
+          "check_was_interrupted_by_user": 0,
+          "segfault": 0
+        },
+        "generated_total": 95,
+        "score_all_generated_percent": 70.53
+      }
+    }
+  },
+  "mutation_score_delta_percentage_points": 23.86,
+  "all_generated_score_delta_percentage_points": 48.42
+}

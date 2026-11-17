@@ -25,10 +25,18 @@ def main() -> int:
 
     dockerfile = BASE_DIR / "sandbox" / "runner" / "Dockerfile"
     image = "smarttest-runner:latest"
-    build = subprocess.run(
-        ["docker", "build", "-t", image, "-f", str(dockerfile), str(dockerfile.parent)],
-        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600,
-    )
+    try:
+        build = subprocess.run(
+            ["docker", "build", "-t", image, "-f", str(dockerfile), str(dockerfile.parent)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600,
+        )
+    except subprocess.TimeoutExpired as error:
+        (run_dir / "logs" / "docker_build.txt").write_text(
+            f"Docker image build timed out after {error.timeout} seconds.\n", encoding="utf-8"
+        )
+        finalize_run({"run_dir": str(run_dir), "run_id": run["run_id"], "validation_status": "error",
+                      "run_error": "Docker image build timeout"}, "error")
+        return 1
     (run_dir / "logs" / "docker_build.txt").write_text(build.stdout + "\n" + build.stderr, encoding="utf-8")
     if build.returncode:
         save_json(run_dir / "benchmark_results.json", {

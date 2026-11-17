@@ -582,6 +582,9 @@ def test_generator_agent(state):
         encoding="utf-8"
     )
 
+    if run_dir:
+        state["run_stage"] = "generation_completed"
+
     # --------------------------------------------------------
     # Étape 10 : vérifier le contenu réellement enregistré
     # --------------------------------------------------------

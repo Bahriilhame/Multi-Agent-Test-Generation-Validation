@@ -1,0 +1,18 @@
+{
+  "run_id": "20261117T155615Z_multiagent_9ff61f3d",
+  "benchmark": "checkout",
+  "mode": "multiagent",
+  "status": "interrupted",
+  "stage": "generation",
+  "error": "KeyboardInterrupt pendant l’appel à Ollama après attente réseau.",
+  "coverage_before": 42.10526315789474,
+  "coverage_after": null,
+  "coverage_delta_percentage_points": null,
+  "branch_coverage_before": 35.0,
+  "branch_coverage_after": null,
+  "generated_test_count": 20,
+  "relevance_score": null,
+  "relevance_feedback": null,
+  "test_results": {},
+  "critic": null
+}

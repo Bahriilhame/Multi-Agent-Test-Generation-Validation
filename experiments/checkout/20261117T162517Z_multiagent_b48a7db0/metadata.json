@@ -1,0 +1,22 @@
+{
+  "run_id": "20261117T162517Z_multiagent_b48a7db0",
+  "benchmark": "checkout",
+  "benchmark_version": "local-checkout-v1",
+  "mode": "multiagent",
+  "project_name": "SmartTest-AI",
+  "started_at": "2026-11-17T16:25:17.321111+00:00",
+  "git_commit": "666631bc3518a9751d1fc11088644afd32b70403",
+  "git_dirty": true,
+  "python_version": "3.12.1",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "model": "qwen2.5-coder:7b",
+  "docker_image": "smarttest-runner:latest",
+  "pytest_version": "9.2.0",
+  "coverage_version": "7.17.3",
+  "command": [
+    "main.py"
+  ],
+  "finished_at": "2026-11-17T16:51:16.959157+00:00",
+  "status": "passed",
+  "stage": "finalized"
+}

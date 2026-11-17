@@ -11,3 +11,4 @@ htmlcov/
 experiments/*/*/runtime/
 experiments/*/*/logs/
 experiments/*/*/generated_tests/
+experiments/*/*/cases/
