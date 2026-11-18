@@ -2,6 +2,17 @@
 
 Prototype multi-agent de génération et de validation de tests Python. La version actuelle utilise le projet local `checkout` comme premier benchmark reproductible.
 
+## État du support générique
+
+Un moteur de découverte de projet est disponible : il repère les fichiers source, tests, configurations, gestionnaires de paquets, langages et quelques frameworks. Lancer l'inspection sans modifier le projet :
+
+```powershell
+python platform_cli.py inspect chemin\vers\projet
+python platform_cli.py inspect chemin\vers\projet --output report.json
+```
+
+L'API d'adaptateur commune se trouve dans `adapters/`. Python est l'unique adaptateur d'exécution implémenté; JavaScript/TypeScript et Java sont actuellement détectés à titre informatif et ne sont pas déclarés supportés. Cette découverte est une première brique : le workflow multi-agent historique et son runner Docker restent liés à `checkout.py`. La génération, l'exécution isolée et la critique génériques pour un chemin arbitraire, l'import ZIP/Git, une interface graphique et SWE-bench restent à réaliser. Ne pas confondre détection de langage et support complet.
+
 ## Prérequis
 
 - Python et dépendances de `requirements.txt`
@@ -55,7 +66,9 @@ Chaque commande crée un identifiant unique et stocke ses résultats dans `exper
    python -m experiments.mbpp --limit 3 --seed 42
    ```
 
-   Le premier lancement télécharge le jeu sanitized officiel dans `datasets/mbpp/`. Chaque run conserve le hash du jeu, les IDs choisis, les réponses Ollama brutes, les tests, les résultats pytest, la couverture et un rapport sous `experiments/mbpp/<run_id>/`. Pour valider le jeu de données et Docker sans appeler Ollama : `python -m experiments.mbpp --limit 1 --baseline-only`.
+   Le premier lancement télécharge le jeu sanitized officiel dans `datasets/mbpp/`. Chaque run conserve le hash du jeu, les IDs choisis, les réponses du générateur et du critique, les tests, les résultats pytest, la couverture et un rapport sous `experiments/mbpp/<run_id>/`. Le Critique-Pertinence Ollama évalue la pertinence, les valeurs attendues, le domaine et la diversité; son rapport inclut aussi les échecs pytest et les imports manquants détectés par AST. Le score combiné pondère la revue sémantique à 70 % et le taux de réussite pytest à 30 %. Cela ajoute un appel Ollama par tâche, limité à 120 secondes au total et 256 tokens; en cas d'échec, les constats pytest/AST et le score heuristique sont conservés. `--critic-mode heuristic` désactive ce second appel et conserve l’ancien score déterministe. Pour valider le jeu de données et Docker sans appeler Ollama : `python -m experiments.mbpp --limit 1 --baseline-only`.
+
+   Pour analyser les artefacts déjà sauvegardés sans régénérer ni réexécuter les suites : `python -m experiments.review_mbpp --run-id <run_id> --task-id <id>`. Le mode par défaut produit les constats déterministes AST/pytest sans Ollama. Ajoute `--critic-mode llm` pour la revue sémantique v2. Les résultats sont écrits dans des fichiers `critic_result_<version>.json` et `critic_response_<version>.txt`; le score historique reste inchangé.
 
 ## Métriques
 
