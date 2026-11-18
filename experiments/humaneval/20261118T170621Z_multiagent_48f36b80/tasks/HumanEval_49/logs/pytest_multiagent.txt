@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python
+rootdir: /app
+plugins: cov-7.1.0
+collecting ... collected 7 items
+
+tests/test_generated.py::test_negative_exponent PASSED                   [ 14%]
+tests/test_generated.py::test_negative_modulus FAILED                    [ 28%]
+tests/test_generated.py::test_zero_exponent PASSED                       [ 42%]
+tests/test_generated.py::test_large_exponent PASSED                      [ 57%]
+tests/test_generated.py::test_large_modulus PASSED                       [ 71%]
+tests/test_generated.py::test_one_modulus PASSED                         [ 85%]
+tests/test_reference.py::test_humaneval_reference PASSED                 [100%]
+
+=================================== FAILURES ===================================
+____________________________ test_negative_modulus _____________________________
+
+    def test_negative_modulus():
+>       with pytest.raises(ValueError):
+             ^^^^^^
+E       NameError: name 'pytest' is not defined
+
+tests/test_generated.py:7: NameError
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.16-final-0 _______________
+
+Name          Stmts   Miss Branch BrPart  Cover   Missing
+---------------------------------------------------------
+solution.py       5      0      2      0   100%
+---------------------------------------------------------
+TOTAL             5      0      2      0   100%
+Coverage JSON written to file /tmp/test-results/coverage.json
+=========================== short test summary info ============================
+FAILED tests/test_generated.py::test_negative_modulus - NameError: name 'pyte...
+========================= 1 failed, 6 passed in 0.69s ==========================
+

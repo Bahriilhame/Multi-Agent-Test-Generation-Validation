@@ -41,6 +41,22 @@ Chaque commande crée un identifiant unique et stocke ses résultats dans `exper
 
    `mutmut` s'exécute dans un conteneur Linux, car son exécution native Windows n'est pas prise en charge. Le rapport se trouve dans `experiments/checkout/<run_id>/mutation_report.md`; les résultats bruts et journaux restent dans le même dossier. Le premier lancement construit une image Docker et nécessite l'accès réseau pour installer `mutmut`.
 
+5. HumanEval sur trois tâches sélectionnées de façon reproductible :
+
+   ```powershell
+   python -m experiments.humaneval --limit 3 --seed 42
+   ```
+
+   Le premier lancement télécharge le jeu officiel dans `datasets/humaneval/`. Les rapports individuels et de synthèse sont écrits sous `experiments/humaneval/<run_id>/`. Le protocole mesure l'effet des tests générés sur la solution de référence; il ne calcule pas le pass@k officiel de génération de solutions. Pour valider le téléchargement et Docker sans appeler Ollama : `python -m experiments.humaneval --limit 1 --baseline-only`.
+
+6. MBPP sur le split de test officiel (IDs 11–510) :
+
+   ```powershell
+   python -m experiments.mbpp --limit 3 --seed 42
+   ```
+
+   Le premier lancement télécharge le jeu sanitized officiel dans `datasets/mbpp/`. Chaque run conserve le hash du jeu, les IDs choisis, les réponses Ollama brutes, les tests, les résultats pytest, la couverture et un rapport sous `experiments/mbpp/<run_id>/`. Pour valider le jeu de données et Docker sans appeler Ollama : `python -m experiments.mbpp --limit 1 --baseline-only`.
+
 ## Métriques
 
 - Couverture des lignes et des branches avant/après, mesurées par coverage.py avec la même configuration.
@@ -52,4 +68,4 @@ La couverture mesure l’exécution du code, pas la capacité des tests à déte
 
 ## Benchmarks prévus
 
-Le format de run est organisé par benchmark : `experiments/<benchmark>/<run_id>/`. Le projet checkout valide aujourd’hui le protocole et le stockage. HumanEval, MBPP et SWE-bench nécessitent encore leurs adaptateurs et leurs critères d’évaluation; aucun résultat n’est produit pour eux par les commandes actuelles.
+Le format de run est organisé par benchmark : `experiments/<benchmark>/<run_id>/`. Checkout, HumanEval et MBPP ont maintenant des premiers parcours d'évaluation. SWE-bench nécessite encore un adaptateur et des critères d'évaluation adaptés à ses patchs logiciels.

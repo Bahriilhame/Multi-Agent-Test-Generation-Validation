@@ -1,0 +1,20 @@
+{
+  "run_id": "20261117T171350Z_multiagent_91d014c4",
+  "benchmark": "humaneval",
+  "mode": "multiagent",
+  "status": "error",
+  "stage": "generation",
+  "error": "NameError: ask_llm import missing; fixed in adapter.",
+  "tasks_requested": 1,
+  "baseline_tasks_passed": 1,
+  "multiagent_tasks_passed": 0,
+  "coverage_before": 100.0,
+  "coverage_after": null,
+  "coverage_delta_percentage_points": null,
+  "tasks": [
+    {
+      "task_id": "HumanEval/61",
+      "status": "error"
+    }
+  ]
+}

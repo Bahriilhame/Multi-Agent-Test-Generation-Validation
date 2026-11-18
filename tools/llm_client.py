@@ -18,6 +18,7 @@ BASE_URL = os.getenv(
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "180"))
 RETRY_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_RETRY_TIMEOUT_SECONDS", "360"))
 MAX_RETRIES = int(os.getenv("OLLAMA_MAX_RETRIES", "1"))
+MAX_OUTPUT_TOKENS = int(os.getenv("OLLAMA_NUM_PREDICT", "512"))
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +29,7 @@ def get_llm(timeout_seconds: float | None = None):
         model=MODEL_NAME,
         base_url=BASE_URL,
         temperature=0,
+        num_predict=MAX_OUTPUT_TOKENS,
         client_kwargs={"timeout": timeout_seconds or REQUEST_TIMEOUT_SECONDS},
     )
 

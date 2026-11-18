@@ -1,0 +1,21 @@
+```python
+from solution import volume_cube
+
+def test_mbpp_zero():
+    assert volume_cube(0) == 0
+
+def test_mbpp_negative():
+    assert volume_cube(-2) == -8
+
+def test_mbpp_large():
+    assert volume_cube(100) == 1000000
+
+def test_mbpp_decimal():
+    assert volume_cube(2.5) == 15.625
+
+def test_mbpp_one():
+    assert volume_cube(1) == 1
+
+def test_mbpp_small():
+    assert volume_cube(0.5) == 0.125
+```

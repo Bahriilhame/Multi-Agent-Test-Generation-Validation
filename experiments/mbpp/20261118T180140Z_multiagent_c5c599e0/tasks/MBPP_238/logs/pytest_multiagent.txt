@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python
+rootdir: /app
+plugins: cov-7.1.0
+collecting ... collected 7 items
+
+tests/test_generated.py::test_mbpp_empty_string PASSED                   [ 14%]
+tests/test_generated.py::test_mbpp_single_character PASSED               [ 28%]
+tests/test_generated.py::test_mbpp_repeated_characters PASSED            [ 42%]
+tests/test_generated.py::test_mbpp_long_string PASSED                    [ 57%]
+tests/test_generated.py::test_mbpp_whitespace PASSED                     [ 71%]
+tests/test_generated.py::test_mbpp_mixed_characters FAILED               [ 85%]
+tests/test_reference.py::test_mbpp_reference PASSED                      [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_mbpp_mixed_characters __________________________
+
+    def test_mbpp_mixed_characters():
+>       assert number_of_substrings("a1b2c3") == 15
+E       AssertionError: assert 21 == 15
+E        +  where 21 = number_of_substrings('a1b2c3')
+
+tests/test_generated.py:19: AssertionError
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.16-final-0 _______________
+
+Name          Stmts   Miss Branch BrPart  Cover   Missing
+---------------------------------------------------------
+solution.py       3      0      0      0   100%
+---------------------------------------------------------
+TOTAL             3      0      0      0   100%
+Coverage JSON written to file /tmp/test-results/coverage.json
+=========================== short test summary info ============================
+FAILED tests/test_generated.py::test_mbpp_mixed_characters - AssertionError: ...
+========================= 1 failed, 6 passed in 0.75s ==========================
+

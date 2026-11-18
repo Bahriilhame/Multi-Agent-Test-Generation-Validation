@@ -1,0 +1,243 @@
+{
+  "run_id": "20261118T174903Z_multiagent_b9b9b3dd",
+  "benchmark": "mbpp",
+  "mode": "multiagent",
+  "status": "completed",
+  "protocol": "MBPP test_list baseline vs baseline + LLM-generated pytest tests; not official pass@k",
+  "tasks_requested": 3,
+  "baseline_tasks_passed": 3,
+  "multiagent_tasks_passed": 1,
+  "mean_coverage_before": 90.48,
+  "mean_coverage_after": 100.0,
+  "mean_coverage_delta_percentage_points": 9.52,
+  "coverage_before": 90.48,
+  "coverage_after": 100.0,
+  "coverage_delta_percentage_points": 9.52,
+  "branch_coverage_before": 88.89,
+  "branch_coverage_after": 100.0,
+  "mean_critic_score": 66.67,
+  "tasks": [
+    {
+      "task_id": 145,
+      "prompt": "Write a python function to find the maximum difference between any two elements in a given array.",
+      "baseline": {
+        "status": "passed",
+        "exit_code": 0,
+        "duration_seconds": 2.739,
+        "tests": {
+          "passed": 1,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "coverage": {
+          "covered_lines": 8,
+          "num_statements": 8,
+          "percent_covered": 100.0,
+          "percent_covered_display": "100",
+          "missing_lines": 0,
+          "excluded_lines": 0,
+          "percent_statements_covered": 100.0,
+          "percent_statements_covered_display": "100",
+          "num_branches": 2,
+          "num_partial_branches": 0,
+          "covered_branches": 2,
+          "missing_branches": 0,
+          "percent_branches_covered": 100.0,
+          "percent_branches_covered_display": "100"
+        },
+        "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 1 item\n\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       8      0      2      0   100%\n---------------------------------------------------------\nTOTAL             8      0      2      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 1 passed in 0.56s ===============================\n\n"
+      },
+      "multiagent": {
+        "status": "failed",
+        "execution": {
+          "status": "failed",
+          "exit_code": 1,
+          "duration_seconds": 2.602,
+          "tests": {
+            "passed": 6,
+            "failed": 1,
+            "errors": 0,
+            "skipped": 0
+          },
+          "coverage": {
+            "covered_lines": 8,
+            "num_statements": 8,
+            "percent_covered": 100.0,
+            "percent_covered_display": "100",
+            "missing_lines": 0,
+            "excluded_lines": 0,
+            "percent_statements_covered": 100.0,
+            "percent_statements_covered_display": "100",
+            "num_branches": 2,
+            "num_partial_branches": 0,
+            "covered_branches": 2,
+            "missing_branches": 0,
+            "percent_branches_covered": 100.0,
+            "percent_branches_covered_display": "100"
+          },
+          "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 7 items\n\ntests/test_generated.py::test_mbpp_empty_array FAILED                    [ 14%]\ntests/test_generated.py::test_mbpp_single_element PASSED                 [ 28%]\ntests/test_generated.py::test_mbpp_negative_numbers PASSED               [ 42%]\ntests/test_generated.py::test_mbpp_mixed_numbers PASSED                  [ 57%]\ntests/test_generated.py::test_mbpp_repeated_elements PASSED              [ 71%]\ntests/test_generated.py::test_mbpp_large_numbers PASSED                  [ 85%]\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n=================================== FAILURES ===================================\n____________________________ test_mbpp_empty_array _____________________________\n\n    def test_mbpp_empty_array():\n>       assert max_Abs_Diff(()) == 0\n               ^^^^^^^^^^^^^^^^\n\ntests/test_generated.py:4: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\narr = ()\n\n    def max_Abs_Diff(arr):\n        n = len(arr)\n>       minEle = arr[0]\n                ^^^^^^\nE       IndexError: tuple index out of range\n\nsolution.py:3: IndexError\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       8      0      2      0   100%\n---------------------------------------------------------\nTOTAL             8      0      2      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n=========================== short test summary info ============================\nFAILED tests/test_generated.py::test_mbpp_empty_array - IndexError: tuple ind...\n========================= 1 failed, 6 passed in 0.72s ==========================\n\n"
+        },
+        "generated_test_count": 6,
+        "critic": {
+          "method": "heuristique AST + exécution + gain de couverture (score sur 100)",
+          "score": 50.0,
+          "generated_tests": 6,
+          "tests_with_explicit_check": 6,
+          "execution_passed": false,
+          "coverage_gain": 0.0,
+          "limitation": "Ce critique déterministe vérifie la structure et les effets mesurés; il ne remplace pas une revue sémantique humaine ou LLM."
+        }
+      },
+      "coverage_delta_percentage_points": 0.0
+    },
+    {
+      "task_id": 396,
+      "prompt": "Write a function to check whether the given string starts and ends with the same character or not.",
+      "baseline": {
+        "status": "passed",
+        "exit_code": 0,
+        "duration_seconds": 2.478,
+        "tests": {
+          "passed": 1,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "coverage": {
+          "covered_lines": 6,
+          "num_statements": 6,
+          "percent_covered": 100.0,
+          "percent_covered_display": "100",
+          "missing_lines": 0,
+          "excluded_lines": 0,
+          "percent_statements_covered": 100.0,
+          "percent_statements_covered_display": "100",
+          "num_branches": 2,
+          "num_partial_branches": 0,
+          "covered_branches": 2,
+          "missing_branches": 0,
+          "percent_branches_covered": 100.0,
+          "percent_branches_covered_display": "100"
+        },
+        "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 1 item\n\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       6      0      2      0   100%\n---------------------------------------------------------\nTOTAL             6      0      2      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 1 passed in 0.55s ===============================\n\n"
+      },
+      "multiagent": {
+        "status": "passed",
+        "execution": {
+          "status": "passed",
+          "exit_code": 0,
+          "duration_seconds": 2.61,
+          "tests": {
+            "passed": 7,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "coverage": {
+            "covered_lines": 6,
+            "num_statements": 6,
+            "percent_covered": 100.0,
+            "percent_covered_display": "100",
+            "missing_lines": 0,
+            "excluded_lines": 0,
+            "percent_statements_covered": 100.0,
+            "percent_statements_covered_display": "100",
+            "num_branches": 2,
+            "num_partial_branches": 0,
+            "covered_branches": 2,
+            "missing_branches": 0,
+            "percent_branches_covered": 100.0,
+            "percent_branches_covered_display": "100"
+          },
+          "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 7 items\n\ntests/test_generated.py::test_mbpp_empty_string PASSED                   [ 14%]\ntests/test_generated.py::test_mbpp_single_uppercase PASSED               [ 28%]\ntests/test_generated.py::test_mbpp_single_digit PASSED                   [ 42%]\ntests/test_generated.py::test_mbpp_single_special_char PASSED            [ 57%]\ntests/test_generated.py::test_mbpp_mixed_case PASSED                     [ 71%]\ntests/test_generated.py::test_mbpp_long_string PASSED                    [ 85%]\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       6      0      2      0   100%\n---------------------------------------------------------\nTOTAL             6      0      2      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 7 passed in 0.66s ===============================\n\n"
+        },
+        "generated_test_count": 6,
+        "critic": {
+          "method": "heuristique AST + exécution + gain de couverture (score sur 100)",
+          "score": 80.0,
+          "generated_tests": 6,
+          "tests_with_explicit_check": 6,
+          "execution_passed": true,
+          "coverage_gain": 0.0,
+          "limitation": "Ce critique déterministe vérifie la structure et les effets mesurés; il ne remplace pas une revue sémantique humaine ou LLM."
+        }
+      },
+      "coverage_delta_percentage_points": 0.0
+    },
+    {
+      "task_id": 93,
+      "prompt": "Write a function to calculate the value of 'a' to the power 'b'.",
+      "baseline": {
+        "status": "passed",
+        "exit_code": 0,
+        "duration_seconds": 2.406,
+        "tests": {
+          "passed": 1,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "coverage": {
+          "covered_lines": 6,
+          "num_statements": 8,
+          "percent_covered": 71.42857142857143,
+          "percent_covered_display": "71",
+          "missing_lines": 2,
+          "excluded_lines": 0,
+          "percent_statements_covered": 75.0,
+          "percent_statements_covered_display": "75",
+          "num_branches": 6,
+          "num_partial_branches": 2,
+          "covered_branches": 4,
+          "missing_branches": 2,
+          "percent_branches_covered": 66.66666666666667,
+          "percent_branches_covered_display": "67"
+        },
+        "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 1 item\n\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       8      2      6      2    71%   3, 5\n---------------------------------------------------------\nTOTAL             8      2      6      2    71%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 1 passed in 0.54s ===============================\n\n"
+      },
+      "multiagent": {
+        "status": "failed",
+        "execution": {
+          "status": "failed",
+          "exit_code": 1,
+          "duration_seconds": 3.924,
+          "tests": {
+            "passed": 6,
+            "failed": 1,
+            "errors": 0,
+            "skipped": 0
+          },
+          "coverage": {
+            "covered_lines": 8,
+            "num_statements": 8,
+            "percent_covered": 100.0,
+            "percent_covered_display": "100",
+            "missing_lines": 0,
+            "excluded_lines": 0,
+            "percent_statements_covered": 100.0,
+            "percent_statements_covered_display": "100",
+            "num_branches": 6,
+            "num_partial_branches": 0,
+            "covered_branches": 6,
+            "missing_branches": 0,
+            "percent_branches_covered": 100.0,
+            "percent_branches_covered_display": "100"
+          },
+          "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 7 items\n\ntests/test_generated.py::test_power_zero_exponent PASSED                 [ 14%]\ntests/test_generated.py::test_power_zero_base PASSED                     [ 28%]\ntests/test_generated.py::test_power_one_exponent PASSED                  [ 42%]\ntests/test_generated.py::test_power_negative_exponent FAILED             [ 57%]\ntests/test_generated.py::test_power_negative_base PASSED                 [ 71%]\ntests/test_generated.py::test_power_large_exponent PASSED                [ 85%]\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n=================================== FAILURES ===================================\n_________________________ test_power_negative_exponent _________________________\n\n    def test_power_negative_exponent():\n>       assert power(2, -2) == 0.25\n               ^^^^^^^^^^^^\n\ntests/test_generated.py:13: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\nsolution.py:9: in power\n    return a*power(a,b-1)\n             ^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\na = 2, b = -968\n\n>   def power(a,b):\nE   RecursionError: maximum recursion depth exceeded\n\nsolution.py:1: RecursionError\n!!! Recursion error detected, but the origin of the recursion could not be located.\n  Displaying first and last 10 stack frames out of 968.\n  Pass `--full-trace` to see all frames.\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       8      0      6      0   100%\n---------------------------------------------------------\nTOTAL             8      0      6      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n=========================== short test summary info ============================\nFAILED tests/test_generated.py::test_power_negative_exponent - RecursionError...\n========================= 1 failed, 6 passed in 2.00s ==========================\n\n"
+        },
+        "generated_test_count": 6,
+        "critic": {
+          "method": "heuristique AST + exécution + gain de couverture (score sur 100)",
+          "score": 70.0,
+          "generated_tests": 6,
+          "tests_with_explicit_check": 6,
+          "execution_passed": false,
+          "coverage_gain": 28.57,
+          "limitation": "Ce critique déterministe vérifie la structure et les effets mesurés; il ne remplace pas une revue sémantique humaine ou LLM."
+        }
+      },
+      "coverage_delta_percentage_points": 28.57
+    }
+  ]
+}

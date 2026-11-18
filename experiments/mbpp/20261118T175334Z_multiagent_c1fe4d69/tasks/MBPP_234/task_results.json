@@ -1,0 +1,74 @@
+{
+  "task_id": 234,
+  "prompt": "Write a function to find the volume of a cube given its side length.",
+  "baseline": {
+    "status": "passed",
+    "exit_code": 0,
+    "duration_seconds": 2.118,
+    "tests": {
+      "passed": 1,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "coverage": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100",
+      "num_branches": 0,
+      "num_partial_branches": 0,
+      "covered_branches": 0,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100"
+    },
+    "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 1 item\n\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       3      0      0      0   100%\n---------------------------------------------------------\nTOTAL             3      0      0      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 1 passed in 0.46s ===============================\n\n"
+  },
+  "multiagent": {
+    "status": "passed",
+    "execution": {
+      "status": "passed",
+      "exit_code": 0,
+      "duration_seconds": 6.864,
+      "tests": {
+        "passed": 7,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "coverage": {
+        "covered_lines": 3,
+        "num_statements": 3,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 0,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 7 items\n\ntests/test_generated.py::test_mbpp_zero PASSED                           [ 14%]\ntests/test_generated.py::test_mbpp_negative PASSED                       [ 28%]\ntests/test_generated.py::test_mbpp_large PASSED                          [ 42%]\ntests/test_generated.py::test_mbpp_decimal PASSED                        [ 57%]\ntests/test_generated.py::test_mbpp_one PASSED                            [ 71%]\ntests/test_generated.py::test_mbpp_small PASSED                          [ 85%]\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       3      0      0      0   100%\n---------------------------------------------------------\nTOTAL             3      0      0      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 7 passed in 2.32s ===============================\n\n"
+    },
+    "generated_test_count": 6,
+    "critic": {
+      "method": "heuristique AST + exécution + gain de couverture (score sur 100)",
+      "score": 80.0,
+      "generated_tests": 6,
+      "tests_with_explicit_check": 6,
+      "execution_passed": true,
+      "coverage_gain": 0.0,
+      "limitation": "Ce critique déterministe vérifie la structure et les effets mesurés; il ne remplace pas une revue sémantique humaine ou LLM."
+    }
+  },
+  "coverage_delta_percentage_points": 0.0
+}

@@ -1,0 +1,46 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python
+rootdir: /app
+plugins: cov-7.1.0
+collecting ... collected 7 items
+
+tests/test_generated.py::test_mbpp_empty_array FAILED                    [ 14%]
+tests/test_generated.py::test_mbpp_single_element PASSED                 [ 28%]
+tests/test_generated.py::test_mbpp_negative_numbers PASSED               [ 42%]
+tests/test_generated.py::test_mbpp_mixed_numbers PASSED                  [ 57%]
+tests/test_generated.py::test_mbpp_repeated_elements PASSED              [ 71%]
+tests/test_generated.py::test_mbpp_large_numbers PASSED                  [ 85%]
+tests/test_reference.py::test_mbpp_reference PASSED                      [100%]
+
+=================================== FAILURES ===================================
+____________________________ test_mbpp_empty_array _____________________________
+
+    def test_mbpp_empty_array():
+>       assert max_Abs_Diff(()) == 0
+               ^^^^^^^^^^^^^^^^
+
+tests/test_generated.py:4: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+arr = ()
+
+    def max_Abs_Diff(arr):
+        n = len(arr)
+>       minEle = arr[0]
+                ^^^^^^
+E       IndexError: tuple index out of range
+
+solution.py:3: IndexError
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.16-final-0 _______________
+
+Name          Stmts   Miss Branch BrPart  Cover   Missing
+---------------------------------------------------------
+solution.py       8      0      2      0   100%
+---------------------------------------------------------
+TOTAL             8      0      2      0   100%
+Coverage JSON written to file /tmp/test-results/coverage.json
+=========================== short test summary info ============================
+FAILED tests/test_generated.py::test_mbpp_empty_array - IndexError: tuple ind...
+========================= 1 failed, 6 passed in 0.72s ==========================
+

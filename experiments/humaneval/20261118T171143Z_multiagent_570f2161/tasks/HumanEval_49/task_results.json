@@ -1,0 +1,74 @@
+{
+  "task_id": "HumanEval/49",
+  "entry_point": "modp",
+  "baseline": {
+    "status": "passed",
+    "exit_code": 0,
+    "duration_seconds": 1.911,
+    "tests": {
+      "passed": 1,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "coverage": {
+      "covered_lines": 5,
+      "num_statements": 5,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100",
+      "num_branches": 2,
+      "num_partial_branches": 0,
+      "covered_branches": 2,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100"
+    },
+    "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 1 item\n\ntests/test_reference.py::test_humaneval_reference PASSED                 [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       5      0      2      0   100%\n---------------------------------------------------------\nTOTAL             5      0      2      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 1 passed in 0.36s ===============================\n\n"
+  },
+  "multiagent": {
+    "status": "failed",
+    "execution": {
+      "status": "failed",
+      "exit_code": 1,
+      "duration_seconds": 2.99,
+      "tests": {
+        "passed": 5,
+        "failed": 2,
+        "errors": 0,
+        "skipped": 0
+      },
+      "coverage": {
+        "covered_lines": 5,
+        "num_statements": 5,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 2,
+        "num_partial_branches": 0,
+        "covered_branches": 2,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 7 items\n\ntests/test_generated.py::test_modp_large_exponent PASSED                 [ 14%]\ntests/test_generated.py::test_modp_large_prime PASSED                    [ 28%]\ntests/test_generated.py::test_modp_zero_exponent PASSED                  [ 42%]\ntests/test_generated.py::test_modp_one_exponent PASSED                   [ 57%]\ntests/test_generated.py::test_modp_negative_exponent FAILED              [ 71%]\ntests/test_generated.py::test_modp_large_base FAILED                     [ 85%]\ntests/test_reference.py::test_humaneval_reference PASSED                 [100%]\n\n=================================== FAILURES ===================================\n_________________________ test_modp_negative_exponent __________________________\n\n    def test_modp_negative_exponent():\n>       assert modp(-1, 101) == 51\nE       assert 1 == 51\nE        +  where 1 = modp(-1, 101)\n\ntests/test_generated.py:16: AssertionError\n_____________________________ test_modp_large_base _____________________________\n\n    def test_modp_large_base():\n>       assert modp(100, 1000003) == 1\nE       assert 253109 == 1\nE        +  where 253109 = modp(100, 1000003)\n\ntests/test_generated.py:19: AssertionError\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       5      0      2      0   100%\n---------------------------------------------------------\nTOTAL             5      0      2      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n=========================== short test summary info ============================\nFAILED tests/test_generated.py::test_modp_negative_exponent - assert 1 == 51\nFAILED tests/test_generated.py::test_modp_large_base - assert 253109 == 1\n========================= 2 failed, 5 passed in 0.69s ==========================\n\n"
+    },
+    "generated_test_count": 6,
+    "critic": {
+      "method": "heuristique AST + exécution + gain de couverture (score sur 100)",
+      "score": 50.0,
+      "generated_tests": 6,
+      "tests_with_explicit_check": 6,
+      "execution_passed": false,
+      "coverage_gain": 0.0,
+      "limitation": "Ce critique déterministe vérifie la structure et les effets mesurés; il ne remplace pas une revue sémantique humaine ou LLM."
+    }
+  },
+  "coverage_delta_percentage_points": 0.0
+}

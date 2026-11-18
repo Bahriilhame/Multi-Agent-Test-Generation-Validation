@@ -1,0 +1,19 @@
+from solution import power
+
+def test_power_zero_exponent():
+    assert power(2, 0) == 1
+
+def test_power_zero_base():
+    assert power(0, 5) == 0
+
+def test_power_one_exponent():
+    assert power(7, 1) == 7
+
+def test_power_negative_exponent():
+    assert power(2, -2) == 0.25
+
+def test_power_negative_base():
+    assert power(-3, 3) == -27
+
+def test_power_large_exponent():
+    assert power(2, 10) == 1024

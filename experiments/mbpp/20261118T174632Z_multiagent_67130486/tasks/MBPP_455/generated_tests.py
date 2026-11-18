@@ -1,0 +1,19 @@
+from solution import check_monthnumb_number
+
+def test_mbpp_edge_cases():
+    assert check_monthnumb_number(1) == True
+    assert check_monthnumb_number(12) == True
+
+def test_mbpp_non_leap_months():
+    assert check_monthnumb_number(4) == False
+    assert check_monthnumb_number(9) == False
+    assert check_monthnumb_number(11) == False
+
+def test_mbpp_zero():
+    assert check_monthnumb_number(0) == False
+
+def test_mbpp_negative():
+    assert check_monthnumb_number(-1) == False
+
+def test_mbpp_large_number():
+    assert check_monthnumb_number(100) == False

@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python
+rootdir: /app
+plugins: cov-7.1.0
+collecting ... collected 1 item
+
+tests/test_reference.py::test_mbpp_reference FAILED                      [100%]
+WARNING: Failed to generate report: No data to report.
+
+
+
+=================================== FAILURES ===================================
+_____________________________ test_mbpp_reference ______________________________
+
+    def test_mbpp_reference():
+>       assert check_monthnumb_number(5)==True
+               ^^^^^^^^^^^^^^^^^^^^^^
+E       NameError: name 'check_monthnumb_number' is not defined
+
+tests/test_reference.py:2: NameError
+=========================== short test summary info ============================
+FAILED tests/test_reference.py::test_mbpp_reference - NameError: name 'check_...
+============================== 1 failed in 0.36s ===============================
+
+/usr/local/lib/python3.12/site-packages/coverage/inorout.py:560: CoverageWarning: Module solution was never imported. (module-not-imported); see https://coverage.readthedocs.io/en/7.17.3/messages.html#warning-module-not-imported
+  self.warn(f"Module {pkg} was never imported.", slug="module-not-imported")
+/usr/local/lib/python3.12/site-packages/coverage/control.py:967: CoverageWarning: No data was collected. (no-data-collected); see https://coverage.readthedocs.io/en/7.17.3/messages.html#warning-no-data-collected
+  self._warn("No data was collected.", slug="no-data-collected")
+/usr/local/lib/python3.12/site-packages/pytest_cov/plugin.py:366: CovReportWarning: Failed to generate report: No data to report.
+
+  warnings.warn(CovReportWarning(message), stacklevel=1)

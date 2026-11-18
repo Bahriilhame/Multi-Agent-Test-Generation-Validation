@@ -12,3 +12,9 @@ experiments/*/*/runtime/
 experiments/*/*/logs/
 experiments/*/*/generated_tests/
 experiments/*/*/cases/
+datasets/humaneval/
+datasets/mbpp/
+experiments/humaneval/*/tasks/*/reference/
+experiments/humaneval/*/tasks/*/multiagent/
+experiments/mbpp/*/tasks/*/reference/
+experiments/mbpp/*/tasks/*/multiagent/

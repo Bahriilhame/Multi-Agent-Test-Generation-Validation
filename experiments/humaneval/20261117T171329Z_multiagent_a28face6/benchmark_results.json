@@ -1,0 +1,54 @@
+{
+  "run_id": "20261117T171329Z_multiagent_a28face6",
+  "benchmark": "humaneval",
+  "mode": "multiagent",
+  "status": "baseline_only",
+  "protocol": "reference tests vs reference + generated unit tests; not official pass@k",
+  "tasks_requested": 1,
+  "baseline_tasks_passed": 1,
+  "multiagent_tasks_passed": 0,
+  "mean_coverage_before": 100.0,
+  "mean_coverage_after": null,
+  "mean_coverage_delta_percentage_points": null,
+  "coverage_before": 100.0,
+  "coverage_after": null,
+  "coverage_delta_percentage_points": null,
+  "branch_coverage_before": 100.0,
+  "branch_coverage_after": null,
+  "mean_critic_score": null,
+  "tasks": [
+    {
+      "task_id": "HumanEval/61",
+      "entry_point": "correct_bracketing",
+      "baseline": {
+        "status": "passed",
+        "exit_code": 0,
+        "duration_seconds": 3.184,
+        "tests": {
+          "passed": 1,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "coverage": {
+          "covered_lines": 9,
+          "num_statements": 9,
+          "percent_covered": 100.0,
+          "percent_covered_display": "100",
+          "missing_lines": 0,
+          "excluded_lines": 0,
+          "percent_statements_covered": 100.0,
+          "percent_statements_covered_display": "100",
+          "num_branches": 6,
+          "num_partial_branches": 0,
+          "covered_branches": 6,
+          "missing_branches": 0,
+          "percent_branches_covered": 100.0,
+          "percent_branches_covered_display": "100"
+        },
+        "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 1 item\n\ntests/test_reference.py::test_humaneval_reference PASSED                 [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       9      0      6      0   100%\n---------------------------------------------------------\nTOTAL             9      0      6      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 1 passed in 0.94s ===============================\n\n"
+      },
+      "multiagent": null
+    }
+  ]
+}

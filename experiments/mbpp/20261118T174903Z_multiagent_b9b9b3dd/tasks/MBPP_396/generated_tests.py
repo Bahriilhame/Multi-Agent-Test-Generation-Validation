@@ -1,0 +1,19 @@
+from solution import check_char
+
+def test_mbpp_empty_string():
+    assert check_char("") == "Invalid"
+
+def test_mbpp_single_uppercase():
+    assert check_char("A") == "Invalid"
+
+def test_mbpp_single_digit():
+    assert check_char("1") == "Invalid"
+
+def test_mbpp_single_special_char():
+    assert check_char("!") == "Invalid"
+
+def test_mbpp_mixed_case():
+    assert check_char("Abba") == "Invalid"
+
+def test_mbpp_long_string():
+    assert check_char("abcdefghijklmnopqrstuvwxyz") == "Invalid"

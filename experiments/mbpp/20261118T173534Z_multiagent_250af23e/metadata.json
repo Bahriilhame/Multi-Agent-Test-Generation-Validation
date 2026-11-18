@@ -1,0 +1,37 @@
+{
+  "run_id": "20261118T173534Z_multiagent_250af23e",
+  "benchmark": "mbpp",
+  "benchmark_version": "google-research/google-research mbpp/sanitized-mbpp.json",
+  "mode": "multiagent",
+  "project_name": "Google Research MBPP sanitized",
+  "started_at": "2026-11-18T17:35:34.807985+00:00",
+  "git_commit": "8ef9dfd628f1d92cd291bfe3745fad403ef812eb",
+  "git_dirty": true,
+  "python_version": "3.12.1",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "model": "qwen2.5-coder:7b",
+  "docker_image": "smarttest-runner:latest",
+  "pytest_version": "9.2.0",
+  "coverage_version": "7.17.3",
+  "command": [
+    "C:\\Users\\m\\Desktop\\Master IA ben msik\\S3\\IA Agentique\\projet\\experiments\\mbpp.py",
+    "--limit",
+    "1",
+    "--seed",
+    "42",
+    "--baseline-only"
+  ],
+  "dataset_url": "https://raw.githubusercontent.com/google-research/google-research/master/mbpp/sanitized-mbpp.json",
+  "dataset_sha256": "ca95deaa9a01ef0a6f439f88bcf0dd3db3563d22f22aad6cae04ebb9a8d8c8e9",
+  "official_test_task_id_range": [
+    11,
+    510
+  ],
+  "selected_task_ids": [
+    455
+  ],
+  "selection_seed": 42,
+  "evaluation_protocol": "MBPP test_list baseline vs baseline + LLM-generated pytest tests; not official pass@k",
+  "finished_at": "2026-11-18T17:35:39.417065+00:00",
+  "status": "baseline_only"
+}

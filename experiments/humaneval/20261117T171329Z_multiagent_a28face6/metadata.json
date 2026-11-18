@@ -1,0 +1,33 @@
+{
+  "run_id": "20261117T171329Z_multiagent_a28face6",
+  "benchmark": "humaneval",
+  "benchmark_version": "openai/human-eval master",
+  "mode": "multiagent",
+  "project_name": "OpenAI HumanEval",
+  "started_at": "2026-11-17T17:13:29.802164+00:00",
+  "git_commit": "8ef9dfd628f1d92cd291bfe3745fad403ef812eb",
+  "git_dirty": true,
+  "python_version": "3.12.1",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "model": "qwen2.5-coder:7b",
+  "docker_image": "smarttest-runner:latest",
+  "pytest_version": "9.2.0",
+  "coverage_version": "7.17.3",
+  "command": [
+    "C:\\Users\\m\\Desktop\\Master IA ben msik\\S3\\IA Agentique\\projet\\experiments\\humaneval.py",
+    "--limit",
+    "1",
+    "--seed",
+    "42",
+    "--baseline-only"
+  ],
+  "dataset_url": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
+  "dataset_sha256": "b796127e635a67f93fb35c04f4cb03cf06f38c8072ee7cee8833d7bee06979ef",
+  "selected_task_ids": [
+    "HumanEval/61"
+  ],
+  "selection_seed": 42,
+  "evaluation_protocol": "reference tests vs reference + generated unit tests; not official pass@k",
+  "finished_at": "2026-11-17T17:13:35.787352+00:00",
+  "status": "baseline_only"
+}

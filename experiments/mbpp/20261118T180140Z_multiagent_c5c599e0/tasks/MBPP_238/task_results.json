@@ -1,0 +1,74 @@
+{
+  "task_id": 238,
+  "prompt": "Write a python function to count the number of non-empty substrings of a given string.",
+  "baseline": {
+    "status": "passed",
+    "exit_code": 0,
+    "duration_seconds": 3.184,
+    "tests": {
+      "passed": 1,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "coverage": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100",
+      "num_branches": 0,
+      "num_partial_branches": 0,
+      "covered_branches": 0,
+      "missing_branches": 0,
+      "percent_branches_covered": 100.0,
+      "percent_branches_covered_display": "100"
+    },
+    "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 1 item\n\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       3      0      0      0   100%\n---------------------------------------------------------\nTOTAL             3      0      0      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n============================== 1 passed in 0.54s ===============================\n\n"
+  },
+  "multiagent": {
+    "status": "failed",
+    "execution": {
+      "status": "failed",
+      "exit_code": 1,
+      "duration_seconds": 2.931,
+      "tests": {
+        "passed": 6,
+        "failed": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "coverage": {
+        "covered_lines": 3,
+        "num_statements": 3,
+        "percent_covered": 100.0,
+        "percent_covered_display": "100",
+        "missing_lines": 0,
+        "excluded_lines": 0,
+        "percent_statements_covered": 100.0,
+        "percent_statements_covered_display": "100",
+        "num_branches": 0,
+        "num_partial_branches": 0,
+        "covered_branches": 0,
+        "missing_branches": 0,
+        "percent_branches_covered": 100.0,
+        "percent_branches_covered_display": "100"
+      },
+      "output_tail": "============================= test session starts ==============================\nplatform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python\nrootdir: /app\nplugins: cov-7.1.0\ncollecting ... collected 7 items\n\ntests/test_generated.py::test_mbpp_empty_string PASSED                   [ 14%]\ntests/test_generated.py::test_mbpp_single_character PASSED               [ 28%]\ntests/test_generated.py::test_mbpp_repeated_characters PASSED            [ 42%]\ntests/test_generated.py::test_mbpp_long_string PASSED                    [ 57%]\ntests/test_generated.py::test_mbpp_whitespace PASSED                     [ 71%]\ntests/test_generated.py::test_mbpp_mixed_characters FAILED               [ 85%]\ntests/test_reference.py::test_mbpp_reference PASSED                      [100%]\n\n=================================== FAILURES ===================================\n__________________________ test_mbpp_mixed_characters __________________________\n\n    def test_mbpp_mixed_characters():\n>       assert number_of_substrings(\"a1b2c3\") == 15\nE       AssertionError: assert 21 == 15\nE        +  where 21 = number_of_substrings('a1b2c3')\n\ntests/test_generated.py:19: AssertionError\n================================ tests coverage ================================\n_______________ coverage: platform linux, python 3.12.16-final-0 _______________\n\nName          Stmts   Miss Branch BrPart  Cover   Missing\n---------------------------------------------------------\nsolution.py       3      0      0      0   100%\n---------------------------------------------------------\nTOTAL             3      0      0      0   100%\nCoverage JSON written to file /tmp/test-results/coverage.json\n=========================== short test summary info ============================\nFAILED tests/test_generated.py::test_mbpp_mixed_characters - AssertionError: ...\n========================= 1 failed, 6 passed in 0.75s ==========================\n\n"
+    },
+    "generated_test_count": 6,
+    "critic": {
+      "method": "heuristique AST + exécution + gain de couverture (score sur 100)",
+      "score": 50.0,
+      "generated_tests": 6,
+      "tests_with_explicit_check": 6,
+      "execution_passed": false,
+      "coverage_gain": 0.0,
+      "limitation": "Ce critique déterministe vérifie la structure et les effets mesurés; il ne remplace pas une revue sémantique humaine ou LLM."
+    }
+  },
+  "coverage_delta_percentage_points": 0.0
+}

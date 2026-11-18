@@ -1,0 +1,21 @@
+```python
+from solution import number_of_substrings
+
+def test_mbpp_empty_string():
+    assert number_of_substrings("") == 0
+
+def test_mbpp_single_character():
+    assert number_of_substrings("a") == 1
+
+def test_mbpp_repeated_characters():
+    assert number_of_substrings("aaa") == 6
+
+def test_mbpp_long_string():
+    assert number_of_substrings("abcdefghijklmnopqrstuvwxyz") == 26 * 27 // 2
+
+def test_mbpp_whitespace():
+    assert number_of_substrings(" ") == 1
+
+def test_mbpp_mixed_characters():
+    assert number_of_substrings("a1b2c3") == 15
+```

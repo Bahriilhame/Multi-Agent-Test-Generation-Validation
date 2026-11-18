@@ -1,0 +1,101 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python
+rootdir: /app
+plugins: cov-7.1.0
+collecting ... collected 7 items
+
+tests/test_generated.py::test_power_zero_exponent PASSED                 [ 14%]
+tests/test_generated.py::test_power_zero_base PASSED                     [ 28%]
+tests/test_generated.py::test_power_one_exponent PASSED                  [ 42%]
+tests/test_generated.py::test_power_negative_exponent FAILED             [ 57%]
+tests/test_generated.py::test_power_negative_base PASSED                 [ 71%]
+tests/test_generated.py::test_power_large_exponent PASSED                [ 85%]
+tests/test_reference.py::test_mbpp_reference PASSED                      [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_power_negative_exponent _________________________
+
+    def test_power_negative_exponent():
+>       assert power(2, -2) == 0.25
+               ^^^^^^^^^^^^
+
+tests/test_generated.py:13: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+solution.py:9: in power
+    return a*power(a,b-1)
+             ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 2, b = -968
+
+>   def power(a,b):
+E   RecursionError: maximum recursion depth exceeded
+
+solution.py:1: RecursionError
+!!! Recursion error detected, but the origin of the recursion could not be located.
+  Displaying first and last 10 stack frames out of 968.
+  Pass `--full-trace` to see all frames.
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.16-final-0 _______________
+
+Name          Stmts   Miss Branch BrPart  Cover   Missing
+---------------------------------------------------------
+solution.py       8      0      6      0   100%
+---------------------------------------------------------
+TOTAL             8      0      6      0   100%
+Coverage JSON written to file /tmp/test-results/coverage.json
+=========================== short test summary info ============================
+FAILED tests/test_generated.py::test_power_negative_exponent - RecursionError...
+========================= 1 failed, 6 passed in 2.00s ==========================
+
