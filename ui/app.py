@@ -11,9 +11,11 @@ from pathlib import Path, PurePosixPath
 
 import streamlit as st
 
-from ui.live_status import read_events, summarize_events
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from ui.live_status import read_events, summarize_events
 
 st.set_page_config(page_title="SmartTest-AI", page_icon="🧪", layout="wide")
 st.title("SmartTest-AI")
