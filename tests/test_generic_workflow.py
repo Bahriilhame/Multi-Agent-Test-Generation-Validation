@@ -11,6 +11,7 @@ from graph import generic_workflow
 from sandbox.generic_runner import _failure_details, _summary_count, run_in_docker
 from tools import ollama_json
 from tools.critic_schema import validate_critic_response
+from ui.live_status import read_events, summarize_events
 
 
 def test_generated_test_code_requires_assertive_pytest_function():
@@ -35,6 +36,25 @@ def test_runner_parses_pytest_counts_and_failure_details():
     assert _summary_count(output, "failed") == 1
     assert _summary_count(output, "error") == 1
     assert "failed assertion" in _failure_details(output)
+
+
+def test_live_status_summarizes_running_and_completed_steps(tmp_path):
+    event_path = tmp_path / "events.jsonl"
+    event_path.write_text(
+        '\n'.join([
+            json.dumps({"node": "analyze", "status": "started", "iteration": 0, "timestamp": "t1"}),
+            json.dumps({"node": "analyze", "status": "completed", "iteration": 0, "timestamp": "t2"}),
+            json.dumps({"node": "generator", "status": "started", "iteration": 1, "timestamp": "t3"}),
+            '{"node":"critic","status":',
+        ]),
+        encoding="utf-8",
+    )
+    steps = summarize_events(read_events(event_path))
+    assert [(step["node"], step["status"]) for step in steps] == [
+        ("analyze", "completed"),
+        ("generator", "running"),
+    ]
+    assert steps[0]["finished_at"] == "t2"
 
 
 def test_critic_schema_requires_consistent_score_and_grounds_issues():

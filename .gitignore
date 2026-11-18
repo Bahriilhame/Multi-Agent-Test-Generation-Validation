@@ -26,6 +26,7 @@ experiments/swebench-tests/
 experiments/swebench-official/
 experiments/benchmark-suites/
 experiments/uploads/
+experiments/ui_logs/
 experiments/validation-final/
 experiments/humaneval/*/
 experiments/mbpp/*/

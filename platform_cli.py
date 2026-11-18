@@ -36,6 +36,7 @@ def main() -> int:
     run.add_argument("--timeout", type=int, default=DOCKER_TIMEOUT_SECONDS)
     run.add_argument("--docker-image", default=RUNNER_IMAGE, help="Docker image with the project's dependencies, pytest and pytest-cov preinstalled")
     run.add_argument("--task-statement", type=Path, help="Optional UTF-8 file containing an issue description or task context")
+    run.add_argument("--run-id", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.command == "inspect":
         report = detect_project(args.path).to_dict()
@@ -50,11 +51,13 @@ def main() -> int:
         parser.error("--iterations must be between 1 and 5")
     if args.timeout < 1:
         parser.error("--timeout must be a positive number")
+    if args.run_id and (not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", args.run_id) or args.run_id in {".", ".."}):
+        parser.error("--run-id contains invalid characters")
     if args.model:
         os.environ["OLLAMA_MODEL"] = args.model
     source_key = Path(args.source).stem if not args.source.startswith(("https://", "ssh://", "git@")) else args.source.rsplit("/", 1)[-1].removesuffix(".git")
     safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", source_key).strip("._")[:60] or "project"
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "_" + uuid.uuid4().hex[:8]
+    run_id = args.run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "_" + uuid.uuid4().hex[:8]
     run_dir = BASE_DIR / "experiments" / "projects" / safe_name / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
     try:

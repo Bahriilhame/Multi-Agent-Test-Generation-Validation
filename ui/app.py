@@ -11,6 +11,8 @@ from pathlib import Path, PurePosixPath
 
 import streamlit as st
 
+from ui.live_status import read_events, summarize_events
+
 ROOT = Path(__file__).resolve().parents[1]
 
 st.set_page_config(page_title="SmartTest-AI", page_icon="🧪", layout="wide")
@@ -56,39 +58,92 @@ elif source_mode == "Archive ZIP":
 else:
     source_value = st.text_input("URL Git HTTPS ou SSH", placeholder="https://github.com/org/repo.git")
 
-if st.button("Lancer l'analyse", type="primary", disabled=not source_value):
+active_run = st.session_state.get("active_run")
+if st.button("Lancer l'analyse", type="primary", disabled=not source_value or active_run is not None):
+    run_id = uuid.uuid4().hex
     cmd = [sys.executable, str(ROOT / "platform_cli.py"), "run", source_value,
            "--model", model, "--iterations", str(iterations), "--timeout", str(int(timeout)),
-           "--min-quality", str(min_score), "--docker-image", docker_image]
-    process = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
-    st.session_state["run_process"] = process
-    st.session_state["run_source"] = source_value
-    st.info("Workflow démarré. Utilise le bouton Actualiser pour vérifier son état.")
+           "--min-quality", str(min_score), "--docker-image", docker_image, "--run-id", run_id]
+    log_path = ROOT / "experiments" / "ui_logs" / f"{run_id}.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as log_file:
+        process = subprocess.Popen(cmd, cwd=ROOT, stdout=log_file, stderr=subprocess.STDOUT)
+    st.session_state["active_run"] = {"process": process, "run_id": run_id, "log_path": str(log_path)}
+    st.session_state.pop("last_run", None)
+    st.rerun()
 
-process = st.session_state.get("run_process")
-if process is not None:
-    if st.button("Actualiser l'état"):
-        st.rerun()
-    return_code = process.poll()
-    if return_code is None:
-        st.warning(f"Exécution en cours (PID {process.pid}). Le modèle Ollama peut prendre quelques minutes.")
+
+def render_run_result(run: dict) -> None:
+    """Render a completed run's report and captured CLI output."""
+    return_code = run["return_code"]
+    report_path = Path(run["report_path"]) if run.get("report_path") else None
+    if return_code == 0 and report_path and report_path.is_file():
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        st.success(f"Workflow terminé — {report.get('status', 'statut inconnu')}")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Statut", report.get("status", "inconnu"))
+        before = report.get("coverage_before")
+        after = report.get("coverage_after")
+        col2.metric("Couverture initiale", f"{before:.1f}%" if before is not None else "n/d")
+        col3.metric("Couverture finale", f"{after:.1f}%" if after is not None else "n/d")
+        st.json(report.get("critic", {}))
+        st.write(f"Rapport : `{report_path}`")
     else:
-        output, _ = process.communicate()
-        st.session_state.pop("run_process", None)
-        st.code(output[-10000:] or "Aucune sortie", language="text")
-        if return_code == 0:
-            matches = list((ROOT / "experiments" / "projects").glob("*/*/report.json"))
-            latest = max(matches, key=lambda path: path.stat().st_mtime) if matches else None
-            if latest:
-                report = json.loads(latest.read_text(encoding="utf-8"))
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Statut", report.get("status", "inconnu"))
-                col2.metric("Couverture initiale", f"{report.get('coverage_before', 0):.1f}%")
-                col3.metric("Couverture finale", f"{(report.get('coverage_after') or 0):.1f}%")
-                st.json(report.get("critic", {}))
-                st.write(f"Rapport : `{latest}`")
-        else:
-            st.error(f"Le workflow a terminé avec le code {return_code}.")
+        st.error(f"Le workflow s'est terminé avec le code {return_code}.")
+    if run.get("output"):
+        with st.expander("Sortie détaillée"):
+            st.code(run["output"][-10000:] or "Aucune sortie", language="text")
+
+
+def render_live_run() -> None:
+    active = st.session_state.get("active_run")
+    if not active:
+        return
+    process = active["process"]
+    run_id = active["run_id"]
+    matches = list((ROOT / "experiments" / "projects").glob(f"*/{run_id}/events.jsonl"))
+    events = read_events(matches[0]) if matches else []
+    steps = summarize_events(events)
+
+    if process.poll() is not None:
+        output = Path(active["log_path"]).read_text(encoding="utf-8", errors="replace") if Path(active["log_path"]).exists() else ""
+        reports = list((ROOT / "experiments" / "projects").glob(f"*/{run_id}/report.json"))
+        st.session_state["last_run"] = {
+            "run_id": run_id,
+            "return_code": process.returncode,
+            "output": output,
+            "report_path": str(reports[0]) if reports else None,
+        }
+        st.session_state.pop("active_run", None)
+        st.rerun()
+
+    st.subheader("Progression du workflow")
+    if not steps:
+        st.info("Préparation du projet (copie locale, extraction ZIP ou clonage Git)…")
+        st.progress(0, text="Préparation du projet")
+        return
+
+    current = next((step for step in reversed(steps) if step["status"] == "running"), None)
+    if current:
+        iteration_text = f" — itération {current['iteration'] + 1}" if current["node"] in {"generator", "validation", "critic"} else ""
+        st.info(f"Étape en cours : **{current['label']}**{iteration_text}")
+    completed = sum(step["status"] in {"completed", "failed"} for step in steps)
+    st.progress(min(1.0, completed / max(1, len(steps))), text=f"{completed} étape(s) terminée(s)")
+    for step in steps:
+        marker = {"completed": "✅", "running": "🔄", "failed": "❌", "pending": "⏳"}[step["status"]]
+        iteration_text = f" · itération {step['iteration'] + 1}" if step["node"] in {"generator", "validation", "critic"} else ""
+        detail = f" — {step['error']}" if step.get("error") else ""
+        st.write(f"{marker} {step['label']}{iteration_text}{detail}")
+
+
+if st.session_state.get("active_run"):
+    @st.fragment(run_every="1s")
+    def live_run_fragment():
+        render_live_run()
+
+    live_run_fragment()
+elif st.session_state.get("last_run"):
+    render_run_result(st.session_state["last_run"])
 
 st.divider()
 st.subheader("Runs récents")

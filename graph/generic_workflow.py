@@ -56,7 +56,18 @@ def _retry_or_finish(state):
 
 
 def _increment(state):
-    return {"iteration": int(state.get("iteration", 0)) + 1, "stage": "retrying"}
+    iteration = int(state.get("iteration", 0))
+    run_dir = state.get("run_dir")
+    if run_dir:
+        event = {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "node": "retry",
+            "status": "completed",
+            "iteration": iteration,
+        }
+        with (Path(run_dir) / "events.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(event, ensure_ascii=False) + "\n")
+    return {"iteration": iteration + 1, "stage": "retrying"}
 
 
 def build_generic_workflow():
