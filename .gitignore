@@ -18,3 +18,14 @@ experiments/humaneval/*/tasks/*/reference/
 experiments/humaneval/*/tasks/*/multiagent/
 experiments/mbpp/*/tasks/*/reference/
 experiments/mbpp/*/tasks/*/multiagent/
+experiments/validation/
+experiments/generic-smoke/
+experiments/projects/
+experiments/swebench/
+experiments/swebench-tests/
+experiments/swebench-official/
+experiments/benchmark-suites/
+experiments/uploads/
+experiments/validation-final/
+experiments/humaneval/*/
+experiments/mbpp/*/

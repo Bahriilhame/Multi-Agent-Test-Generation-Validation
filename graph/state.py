@@ -1,4 +1,4 @@
-from typing import TypedDict, Any
+from typing import Any, TypedDict
 
 
 class TestingState(TypedDict, total=False):
@@ -43,3 +43,24 @@ class TestingState(TypedDict, total=False):
 
     # Rapport final
     final_report: dict[str, Any]
+
+    # Generic workflow fields (kept optional for legacy checkout state)
+    project_info: dict[str, Any]
+    adapter: str
+    source_context: str
+    existing_test_files: list[str]
+    existing_tests_context: str
+    baseline_results: dict[str, Any]
+    execution_result: dict[str, Any]
+    critic_feedback: str
+    accepted: bool
+    min_quality_score: float
+    run_error: str
+    errors: list[str]
+    stage: str
+    task_context: str
+    generation_duration_seconds: float
+    coverage_before_report: dict[str, Any]
+    source_kind: str
+    docker_image: str
+    timeout_seconds: int

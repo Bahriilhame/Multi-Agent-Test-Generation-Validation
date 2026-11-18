@@ -11,7 +11,48 @@ python platform_cli.py inspect chemin\vers\projet
 python platform_cli.py inspect chemin\vers\projet --output report.json
 ```
 
-L'API d'adaptateur commune se trouve dans `adapters/`. Python est l'unique adaptateur d'exécution implémenté; JavaScript/TypeScript et Java sont actuellement détectés à titre informatif et ne sont pas déclarés supportés. Cette découverte est une première brique : le workflow multi-agent historique et son runner Docker restent liés à `checkout.py`. La génération, l'exécution isolée et la critique génériques pour un chemin arbitraire, l'import ZIP/Git, une interface graphique et SWE-bench restent à réaliser. Ne pas confondre détection de langage et support complet.
+L'API d'adaptateur commune se trouve dans `adapters/`. Python est l'unique adaptateur d'exécution implémenté; JavaScript/TypeScript et Java sont détectés à titre informatif et ne sont pas déclarés supportés. Le flux historique `python main.py` reste une démonstration `checkout`; le flux générique ci-dessous est le point d'entrée pour d'autres projets Python.
+
+## Workflow générique Python
+
+Un pipeline générique (LangGraph, boucle bornée, Ollama, copie temporaire et Docker hors réseau) est maintenant disponible pour les dossiers, ZIP et dépôts Git HTTPS/SSH :
+
+```powershell
+python platform_cli.py run .\chemin\vers\projet --iterations 2
+python platform_cli.py run .\projet.zip --model qwen2.5-coder:7b
+python platform_cli.py run https://github.com/organisation/projet.git --docker-image mon-runner:latest
+```
+
+Le runner standard fournit Python, pytest et coverage. Les dépendances applicatives doivent déjà être présentes dans l'image Docker indiquée par `--docker-image`; le système ne lance pas d'installation arbitraire de paquets du projet. Les résultats, tests générés et journaux vont dans `experiments/projects/<projet>/<run_id>/`. Le score du critique combine une revue sémantique Ollama avec AST et résultat pytest; si Ollama est indisponible, il conserve un score heuristique mais ne marque pas le run accepté. Docker fournit une isolation utile, sans constituer une garantie contre les vulnérabilités du noyau ou du daemon.
+
+Pour recalculer la décision après mise à jour des règles du critique, sans rappeler le modèle ni réexécuter les tests : `python -m experiments.review_project_run --run-dir experiments/projects/<projet>/<run_id>`. Cette commande écrit `critic_result_v2.json` sans modifier le rapport d'origine; ajoute `--response-file <fichier>` si la réponse brute a été conservée sous un autre nom.
+
+Projets de démonstration indépendants : `demos/python_functions`, `demos/python_modules`, `demos/flask_api`, `demos/low_coverage` et `demos/edge_cases`. Flask nécessite une image bâtie avec son `Dockerfile` avant l'exécution (`docker build -t smarttest-flask-demo demos/flask_api`, puis `--docker-image smarttest-flask-demo`).
+
+Interface locale (dépendance facultative) :
+
+```powershell
+python -m pip install -r requirements-ui.txt
+streamlit run ui/app.py
+```
+
+L'interface prend un chemin local, une archive ZIP ou une URL Git, permet de choisir Ollama, le nombre de cycles, le timeout, le seuil de pertinence et l'image Docker, puis affiche les résultats et rapports.
+
+## SWE-bench Lite
+
+L'adaptateur télécharge/filtre le split officiel sans exporter les champs `patch` et `test_patch` vers les prompts. Il distingue la recherche de génération de tests sur la révision de base de la résolution officielle de patchs : seul l'outil upstream peut produire la métrique « resolved ». Le mode officiel nécessite WSL2/Linux, Docker et la dépendance `swebench`.
+
+```powershell
+python -m pip install -r requirements-swebench.txt
+python -m experiments.swebench prepare --limit 1 --seed 42
+python -m experiments.swebench run-tests --instance-id sympy__sympy-20590 --iterations 1
+```
+
+Pour une vraie évaluation officielle de patchs (format JSONL `instance_id`, `model_name_or_path`, `model_patch`), dans WSL2/Linux :
+
+```bash
+python -m experiments.swebench official-eval --predictions predictions.jsonl --instance-id sympy__sympy-20590 --workers 1
+```
 
 ## Prérequis
 
@@ -60,6 +101,8 @@ Chaque commande crée un identifiant unique et stocke ses résultats dans `exper
 
    Le premier lancement télécharge le jeu officiel dans `datasets/humaneval/`. Les rapports individuels et de synthèse sont écrits sous `experiments/humaneval/<run_id>/`. Le protocole mesure l'effet des tests générés sur la solution de référence; il ne calcule pas le pass@k officiel de génération de solutions. Pour valider le téléchargement et Docker sans appeler Ollama : `python -m experiments.humaneval --limit 1 --baseline-only`.
 
+   Runner commun pour lancer HumanEval et MBPP séparément ou successivement avec même modèle, limite et graine : `python -m experiments.run_benchmarks --benchmarks all --limit 3 --seed 42 --model qwen2.5-coder:7b`. Les journaux consolidés sont dans `experiments/benchmark-suites/<run_id>/`; les résultats détaillés restent dans chaque benchmark.
+
 6. MBPP sur le split de test officiel (IDs 11–510) :
 
    ```powershell
@@ -79,6 +122,6 @@ Chaque commande crée un identifiant unique et stocke ses résultats dans `exper
 
 La couverture mesure l’exécution du code, pas la capacité des tests à détecter une faute. Le rapport garde donc cette limite explicite. Les comparaisons futures devront garder le même commit, les mêmes versions et la même configuration, et les essais du LLM devraient être répétés pour mesurer la variabilité.
 
-## Benchmarks prévus
+## Benchmarks
 
-Le format de run est organisé par benchmark : `experiments/<benchmark>/<run_id>/`. Checkout, HumanEval et MBPP ont maintenant des premiers parcours d'évaluation. SWE-bench nécessite encore un adaptateur et des critères d'évaluation adaptés à ses patchs logiciels.
+Le format de run est organisé par benchmark : `experiments/<benchmark>/<run_id>/`. Checkout, HumanEval et MBPP ont des parcours d'évaluation de génération de tests. SWE-bench Lite dispose d'un adaptateur de préparation et d'essai de génération de tests, ainsi qu'un appel au harness officiel pour les patchs. Ces deux protocoles sont rapportés séparément; les métriques HumanEval/MBPP ne sont pas assimilées à SWE-bench.

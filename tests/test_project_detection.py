@@ -38,3 +38,21 @@ def test_ignores_virtualenv_and_node_modules(tmp_path):
     (tmp_path / "node_modules").mkdir()
     (tmp_path / "node_modules" / "lib.js").write_text("", encoding="utf-8")
     assert detect_project(tmp_path).languages == []
+
+
+def test_detects_frameworks_from_source_and_java_build_metadata(tmp_path):
+    (tmp_path / "app.py").write_text("from flask import Flask\napp = Flask(__name__)\n", encoding="utf-8")
+    (tmp_path / "requirements.txt").write_text("Flask>=3\n", encoding="utf-8")
+    python_info = detect_project(tmp_path)
+    assert "Flask" in python_info.frameworks
+
+    java = tmp_path / "java-project"
+    java.mkdir()
+    (java / "src").mkdir()
+    (java / "src" / "Application.java").write_text("class Application {}\n", encoding="utf-8")
+    (java / "pom.xml").write_text("org.springframework.boot spring-boot-starter-test junit\n", encoding="utf-8")
+    java_info = detect_project(java)
+    assert "Spring Boot" in java_info.frameworks
+    assert "JUnit" in java_info.frameworks
+    assert "Maven" in java_info.package_managers
+    assert java_info.supported is False
