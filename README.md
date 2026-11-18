@@ -46,6 +46,8 @@ docker build -t flasktasks-runner .
 python platform_cli.py run https://github.com/organisation/flasktasks.git --docker-image flasktasks-runner
 ```
 
+Le fichier réutilisable `sandbox/runner/Dockerfile.project` fait la même chose : depuis la racine de SmartTest-AI, passe-le avec `-f` et utilise la racine du dépôt comme contexte Docker.
+
 Dans l'interface, saisis `flasktasks-runner` dans le champ de l'image Docker. L'analyse s'arrête avec le nom des modules manquants si l'image ne contient pas les dépendances nécessaires.
 
 Pour recalculer la décision après mise à jour des règles du critique, sans rappeler le modèle ni réexécuter les tests : `python -m experiments.review_project_run --run-dir experiments/projects/<projet>/<run_id>`. Cette commande écrit `critic_result_v2.json` sans modifier le rapport d'origine; ajoute `--response-file <fichier>` si la réponse brute a été conservée sous un autre nom.

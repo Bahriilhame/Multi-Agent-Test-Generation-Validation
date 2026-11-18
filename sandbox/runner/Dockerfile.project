@@ -1,0 +1,8 @@
+# Build this image with the target project's root as the Docker build context.
+FROM smarttest-runner:latest
+
+USER root
+COPY requirements.txt /tmp/project-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/project-requirements.txt
+
+USER tester
