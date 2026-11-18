@@ -1,0 +1,3 @@
+-r requirements.txt
+datasets>=3,<5
+swebench>=5.0,<6

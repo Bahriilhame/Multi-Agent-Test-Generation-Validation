@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - run: ruff check adapters agents/generic_pipeline.py graph/generic_workflow.py graph/state.py sandbox/generic_runner.py tools/prompt_templates.py tools/critic_schema.py tools/ollama_json.py platform_cli.py experiments/swebench.py experiments/run_benchmarks.py experiments/review_project_run.py tests/test_generic_workflow.py tests/test_project_detection.py tests/test_swebench_adapter.py
+      - run: python -m compileall -q adapters agents graph experiments sandbox tools ui
+      - run: python -m pytest -q
