@@ -3,20 +3,44 @@
 import json
 
 
+def _compact_uncovered(uncovered: list[dict], *, max_chars: int = 1500) -> str:
+    """Keep the highest priority coverage facts within a small prompt budget."""
+    selected = []
+    for item in uncovered[:12]:
+        functions = [
+            {
+                "name": str(function.get("name", ""))[:100],
+                "missing_lines": function.get("missing_lines", [])[:8],
+                "missing_branches": function.get("missing_branches", [])[:5],
+            }
+            for function in item.get("functions", [])[:3]
+        ]
+        compact = {
+            "file": str(item.get("file", ""))[:160],
+            "missing_lines": item.get("missing_lines", [])[:12],
+            "missing_branches": item.get("missing_branches", [])[:8],
+            "functions": functions,
+        }
+        if len(json.dumps(selected + [compact], ensure_ascii=False)) > max_chars:
+            break
+        selected.append(compact)
+    return json.dumps(selected, ensure_ascii=False, separators=(",", ":"))
+
+
 def build_generic_generation_prompt(*, source: str, uncovered: list[dict], existing_tests: str, feedback: str, task_context: str) -> str:
     return f"""You are a senior Python test engineer. Generate additional pytest tests for this project.
 Return only Python test code. Do not alter production code. Use behavior justified by the source; cover normal, boundary, invalid and exception cases where source semantics support them. Use meaningful assertions, deterministic data and parametrization where useful. Avoid duplicating existing tests. Do not use filesystem, process, network or shell access. Tests must import project code correctly.
 
 Existing tests (avoid duplicating covered behaviors):
-{existing_tests[:12000]}
+{existing_tests[:1600]}
 Uncovered source lines/functions (coverage is not a behavior specification):
-{json.dumps(uncovered, ensure_ascii=False, indent=2)}
+{_compact_uncovered(uncovered)}
 Critic feedback to address on this iteration:
-{feedback[:5000]}
+{feedback[:500]}
 Issue/task context (if supplied; source code remains authoritative for visible behavior):
-{task_context[:6000]}
+{task_context[:500]}
 Source context:
-{source[:12000]}
+{source[:3500]}
 """
 
 

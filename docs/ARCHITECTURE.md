@@ -18,7 +18,7 @@ The graph state carries the resolved project information, chosen adapter, source
 
 `ProjectAdapter` defines project detection, coverage, test discovery, context preparation, test execution and result collection. `detect_project()` recognizes Python, JavaScript, TypeScript and Java plus common package managers/configurations and frameworks. Only `PythonAdapter` is executable. Unsupported primary languages are reported without routing their code through the Python runner.
 
-The Python runner stages a disposable source copy and a separately generated test module. It omits Git metadata, virtual environments, common secret files and links. It measures application coverage while omitting test files. Application dependencies must already exist in the chosen image; runtime package installation is intentionally avoided.
+The Python runner stages a disposable source copy and a separately generated test module. It omits Git metadata, virtual environments, common secret files and links. It measures application coverage while omitting test files. Application dependencies must already exist in the chosen image; runtime package installation is intentionally avoided. Missing Python modules in baseline pytest output stop the run early with a Docker image build hint.
 
 ## Four agents
 

@@ -25,6 +25,29 @@ python platform_cli.py run https://github.com/organisation/projet.git --docker-i
 
 Le runner standard fournit Python, pytest et coverage. Les dépendances applicatives doivent déjà être présentes dans l'image Docker indiquée par `--docker-image`; le système ne lance pas d'installation arbitraire de paquets du projet. Les résultats, tests générés et journaux vont dans `experiments/projects/<projet>/<run_id>/`. Le score du critique combine une revue sémantique Ollama avec AST et résultat pytest; si Ollama est indisponible, il conserve un score heuristique mais ne marque pas le run accepté. Docker fournit une isolation utile, sans constituer une garantie contre les vulnérabilités du noyau ou du daemon.
 
+Pour un dépôt Flask ayant un `requirements.txt`, bâtis d'abord l'image de base depuis la racine de SmartTest-AI :
+
+```powershell
+docker build -t smarttest-runner:latest -f sandbox/runner/Dockerfile sandbox/runner
+```
+
+Ajoute ensuite ce `Dockerfile` à la racine du dépôt Flask et bâtis son image :
+
+```dockerfile
+FROM smarttest-runner:latest
+USER root
+COPY requirements.txt /tmp/project-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/project-requirements.txt
+USER tester
+```
+
+```powershell
+docker build -t flasktasks-runner .
+python platform_cli.py run https://github.com/organisation/flasktasks.git --docker-image flasktasks-runner
+```
+
+Dans l'interface, saisis `flasktasks-runner` dans le champ de l'image Docker. L'analyse s'arrête avec le nom des modules manquants si l'image ne contient pas les dépendances nécessaires.
+
 Pour recalculer la décision après mise à jour des règles du critique, sans rappeler le modèle ni réexécuter les tests : `python -m experiments.review_project_run --run-dir experiments/projects/<projet>/<run_id>`. Cette commande écrit `critic_result_v2.json` sans modifier le rapport d'origine; ajoute `--response-file <fichier>` si la réponse brute a été conservée sous un autre nom.
 
 Projets de démonstration indépendants : `demos/python_functions`, `demos/python_modules`, `demos/flask_api`, `demos/low_coverage` et `demos/edge_cases`. Flask nécessite une image bâtie avec son `Dockerfile` avant l'exécution (`docker build -t smarttest-flask-demo demos/flask_api`, puis `--docker-image smarttest-flask-demo`).

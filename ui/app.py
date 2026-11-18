@@ -25,7 +25,11 @@ with st.sidebar:
     model = st.text_input("Modèle Ollama", value=os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b"))
     iterations = st.slider("Nombre maximum d'itérations", 1, 5, 2)
     timeout = st.number_input("Timeout des tests (secondes)", min_value=10, max_value=1800, value=120)
-    docker_image = st.text_input("Image Docker (pytest et dépendances préinstallés)", value="smarttest-runner:latest")
+    docker_image = st.text_input(
+        "Image Docker (pytest et dépendances préinstallés)",
+        value="smarttest-runner:latest",
+        help="L'image doit contenir aussi les dépendances du projet. Pour Flask, crée une image dérivée de smarttest-runner:latest et installe le requirements.txt du projet.",
+    )
     min_score = st.slider("Score minimal d'acceptation", 0, 100, 70)
 
 source_mode = st.radio("Projet", ["Dossier local", "Dossier sélectionné", "Archive ZIP", "Dépôt Git"], horizontal=True)
@@ -79,8 +83,8 @@ def render_run_result(run: dict) -> None:
     """Render a completed run's report and captured CLI output."""
     return_code = run["return_code"]
     report_path = Path(run["report_path"]) if run.get("report_path") else None
+    report = json.loads(report_path.read_text(encoding="utf-8")) if report_path and report_path.is_file() else {}
     if return_code == 0 and report_path and report_path.is_file():
-        report = json.loads(report_path.read_text(encoding="utf-8"))
         st.success(f"Workflow terminé — {report.get('status', 'statut inconnu')}")
         col1, col2, col3 = st.columns(3)
         col1.metric("Statut", report.get("status", "inconnu"))
@@ -92,6 +96,11 @@ def render_run_result(run: dict) -> None:
         st.write(f"Rapport : `{report_path}`")
     else:
         st.error(f"Le workflow s'est terminé avec le code {return_code}.")
+        errors = report.get("errors", [])
+        if errors:
+            st.error(errors[-1])
+        elif report.get("error"):
+            st.error(report["error"])
     if run.get("output"):
         with st.expander("Sortie détaillée"):
             st.code(run["output"][-10000:] or "Aucune sortie", language="text")

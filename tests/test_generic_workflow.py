@@ -4,13 +4,15 @@ import zipfile
 
 import pytest
 
+from adapters.base import ProjectInfo
 from adapters.input_sources import materialize_source
-from agents.generic_pipeline import _extract_code
+from agents.generic_pipeline import _extract_code, analyze_node
 from experiments.review_project_run import review as review_project_run
 from graph import generic_workflow
 from sandbox.generic_runner import _failure_details, _summary_count, run_in_docker
 from tools import ollama_json
 from tools.critic_schema import validate_critic_response
+from tools.prompt_templates import build_generic_generation_prompt
 from ui.live_status import read_events, summarize_events
 
 
@@ -18,6 +20,40 @@ def test_generated_test_code_requires_assertive_pytest_function():
     assert "test_value" in _extract_code("```python\ndef test_value():\n    assert 2 == 2\n```")
     with pytest.raises(ValueError, match="no pytest"):
         _extract_code("def helper():\n    return 1")
+
+
+def test_generation_prompt_stays_within_small_model_context_budget():
+    prompt = build_generic_generation_prompt(
+        source="def calculate(value):\n    return value + 1\n" * 500,
+        uncovered=[
+            {
+                "file": f"module_{index}.py",
+                "missing_lines": list(range(1, 200)),
+                "missing_branches": list(range(1, 100)),
+                "functions": [{"name": "calculate", "missing_lines": list(range(1, 100)), "missing_branches": list(range(1, 30))}],
+            }
+            for index in range(100)
+        ],
+        existing_tests="def test_existing():\n    assert True\n" * 1000,
+        feedback="feedback " * 1000,
+        task_context="context " * 1000,
+    )
+    assert len(prompt) < 10_000
+    assert "module_0.py" in prompt
+
+
+def test_analysis_stops_early_when_runner_image_lacks_project_dependencies(tmp_path, monkeypatch):
+    info = ProjectInfo(
+        root=str(tmp_path), name="sample", languages=["Python"],
+        supported=True, adapter="python",
+    )
+    monkeypatch.setattr("agents.generic_pipeline.detect_project", lambda _root: info)
+    monkeypatch.setattr(
+        "agents.generic_pipeline.run_in_docker",
+        lambda *_args, **_kwargs: {"missing_dependencies": ["flask"]},
+    )
+    with pytest.raises(RuntimeError, match="missing project dependencies: flask"):
+        analyze_node({"project_path": str(tmp_path), "run_dir": str(tmp_path / "run")})
 
 
 def test_generated_test_code_rejects_process_and_network_imports():

@@ -29,6 +29,14 @@ def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
     adapter = PythonAdapter()
     run_dir = Path(state["run_dir"])
     baseline = run_in_docker(root, run_dir / "baseline", "", image=state.get("docker_image", "smarttest-runner:latest"))
+    missing_dependencies = baseline.get("missing_dependencies", [])
+    if missing_dependencies:
+        names = ", ".join(missing_dependencies)
+        raise RuntimeError(
+            f"Runner image is missing project dependencies: {names}. "
+            "Build a custom Docker image with the project's requirements installed, "
+            "then select that image in the UI."
+        )
     coverage = baseline.get("coverage") or {}
     uncovered = []
     for filename, data in coverage.get("files", {}).items():
@@ -94,7 +102,7 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     existing = state.get("existing_tests_context", "") or "\n".join(state.get("existing_test_files", []))
     prompt = build_generic_generation_prompt(source=context, uncovered=state.get("uncovered_details", []), existing_tests=existing, feedback=prior, task_context=state.get("task_context", ""))
     generation_started = time.perf_counter()
-    response = ask_llm(prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=1800)
+    response = ask_llm(prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=700)
     try:
         code = _extract_code(response)
     except (SyntaxError, ValueError) as first_error:
@@ -102,7 +110,7 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
             prompt + "\n\nYour previous response was invalid: " + str(first_error)
             + "\nRepair it and return only one syntactically valid Python module containing pytest test functions."
         )
-        response = ask_llm(repair_prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=1800)
+        response = ask_llm(repair_prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=700)
         code = _extract_code(response)
     generation_duration = round(time.perf_counter() - generation_started, 3)
     destination = Path(state["run_dir"]) / "generated_tests" / "test_generated.py"
