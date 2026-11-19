@@ -9,7 +9,12 @@ from adapters.input_sources import materialize_source
 from agents.generic_pipeline import _extract_code, analyze_node, critic_node
 from experiments.review_project_run import review as review_project_run
 from graph import generic_workflow
-from sandbox.generic_runner import _failure_details, _summary_count, run_in_docker
+from sandbox.generic_runner import (
+    _failure_details,
+    _summary_count,
+    run_in_docker,
+    summarize_failure_details,
+)
 from tools import ollama_json
 from tools.critic_schema import validate_critic_response
 from tools.prompt_templates import build_generic_generation_prompt
@@ -20,8 +25,12 @@ def test_generated_test_code_requires_assertive_pytest_function():
     assert "test_value" in _extract_code("```python\ndef test_value():\n    assert 2 == 2\n```")
     with pytest.raises(ValueError, match="no pytest"):
         _extract_code("def helper():\n    return 1")
-    with pytest.raises(ValueError, match="duplicate existing test functions"):
-        _extract_code("def test_existing():\n    assert True\n", ["test_existing"])
+    filtered = _extract_code(
+        "def test_existing():\n    assert True\n\ndef test_new():\n    assert 1 + 1 == 2\n",
+        ["test_existing"],
+    )
+    assert "def test_existing" not in filtered
+    assert "def test_new" in filtered
 
 
 def test_generated_test_code_adds_import_for_project_symbol_used_in_fixture(tmp_path):
@@ -128,6 +137,23 @@ def test_runner_parses_pytest_counts_and_failure_details():
     assert _summary_count(output, "failed") == 1
     assert _summary_count(output, "error") == 1
     assert "failed assertion" in _failure_details(output)
+
+
+def test_failure_summary_keeps_test_names_and_short_causes():
+    output = """=========================== FAILURES ===========================
+________________________ test_create_user_duplicate ________________________
+> client.get('/create_user/testuser')
+E       sqlalchemy.exc.IntegrityError: UNIQUE constraint failed: user.username
+________________________ test_create_user_invalid_name _____________________
+> assert response.data == b'Not Found'
+E       AssertionError: assert b'<html>404</html>' == b'Not Found'
+"""
+    summary = summarize_failure_details(output)
+    assert "test_create_user_duplicate" in summary
+    assert "UNIQUE constraint failed" in summary
+    assert "test_create_user_invalid_name" in summary
+    assert "response.data == b'Not Found'" in summary
+    assert len(summary) < 1200
 
 
 def test_live_status_summarizes_running_and_completed_steps(tmp_path):

@@ -12,7 +12,7 @@ from typing import Any
 
 from adapters import detect_project
 from adapters.python import PythonAdapter
-from sandbox.generic_runner import run_in_docker
+from sandbox.generic_runner import run_in_docker, summarize_failure_details
 from tools.critic_schema import validate_critic_response
 from tools.llm_client import ask_llm
 from tools.ollama_json import ask_llm_json
@@ -197,7 +197,22 @@ def _extract_code(
         raise ValueError("Generated tests contain duplicate function names.")
     duplicate_names = sorted({node.name for node in tests}.intersection(existing_test_names or []))
     if duplicate_names:
-        raise ValueError(f"Generated tests duplicate existing test functions: {', '.join(duplicate_names)}.")
+        lines = code.splitlines()
+        remove_lines = set()
+        for node in tests:
+            if node.name in duplicate_names:
+                start = min((decorator.lineno for decorator in node.decorator_list), default=node.lineno)
+                remove_lines.update(range(start - 1, node.end_lineno))
+        code = "\n".join(line for index, line in enumerate(lines) if index not in remove_lines).strip()
+        tree = ast.parse(code)
+        tests = [
+            node for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")
+        ]
+        if not tests:
+            raise ValueError(
+                "The response only repeated existing test functions; generate genuinely new tests."
+            )
     if project_root is not None:
         unresolved = _undefined_test_names(tree)
         available_symbols = _module_importable_symbols(project_root)
@@ -282,7 +297,7 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
         feedback.append(f"{failed} generated/existing tests failed or errored; repair the concrete assertion failures below.")
         details = execution.get("failure_details", "")
         if details:
-            feedback.append("Observed pytest failure detail:\n" + details[:5000])
+            feedback.append("Concise pytest failure summary:\n" + summarize_failure_details(details))
     if execution.get("missing_dependencies"):
         feedback.append("Container dependency errors (install these in a custom image, not at runtime): " + ", ".join(execution["missing_dependencies"]))
     if not assertions: feedback.append("Add meaningful assertions or exception checks; tests currently do not verify outcomes.")

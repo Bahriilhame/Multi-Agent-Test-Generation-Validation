@@ -158,6 +158,36 @@ def _summary_count(output: str, name: str) -> int:
 def _failure_details(output: str) -> str:
     match = re.search(r"=+ FAILURES =+\s*(.*?)(?=\n=+ (?:tests coverage|short test summary)|\Z)", output, re.DOTALL)
     if match:
-        return match.group(1).strip()[-5000:]
+        return match.group(1).strip()
     match = re.search(r"=+ ERRORS =+\s*(.*?)(?=\n=+ (?:tests coverage|short test summary)|\Z)", output, re.DOTALL)
-    return match.group(1).strip()[-5000:] if match else ""
+    return match.group(1).strip() if match else ""
+
+
+def summarize_failure_details(output: str, *, limit: int = 1200) -> str:
+    """Reduce pytest tracebacks to each failed test's name and actionable cause."""
+    headers = list(re.finditer(r"(?m)^_{3,}\s*(.*?)\s*_{3,}\s*$", output))
+    summaries = []
+    for index, header in enumerate(headers):
+        name = header.group(1).strip()
+        if "test_" not in name:
+            continue
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(output)
+        section = output[header.end():end]
+        lines = section.splitlines()
+        causes = [
+            line.strip()[2:].strip()
+            for line in lines
+            if line.lstrip().startswith("E ")
+            and re.search(r"(?:AssertionError|IntegrityError|NameError|TypeError|ValueError|KeyError|IndexError|ImportError|ModuleNotFoundError|TimeoutError)", line)
+        ]
+        cause = causes[-1] if causes else "pytest reported a failure; inspect the detailed log"
+        assertion = next(
+            (line.strip()[1:].strip() for line in lines if re.match(r"^>\s+.*\bassert\b", line)),
+            None,
+        )
+        detail = f"{name}: {cause}"
+        if assertion and "AssertionError" in cause:
+            detail += f"; {assertion}"
+        summaries.append(detail)
+    rendered = "\n".join(f"- {item}" for item in summaries[:8])
+    return rendered[:limit] if rendered else output.strip()[-limit:]
