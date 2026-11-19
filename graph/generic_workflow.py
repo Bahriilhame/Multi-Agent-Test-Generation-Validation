@@ -44,7 +44,9 @@ def _safe(node):
 
 
 def _after(state):
-    return "finalize" if state.get("run_error") or state.get("coverage_saturated") else "generator"
+    # Full baseline coverage is not a reason to skip the generated-test
+    # execution/critic/repair cycle. It only satisfies the coverage objective.
+    return "finalize" if state.get("run_error") else "generator"
 
 
 def _retry_or_finish(state):

@@ -701,8 +701,6 @@ def finalize_node(state: dict[str, Any]) -> dict[str, Any]:
     )
     if state.get("run_error"):
         status = "error"
-    elif coverage_saturated and not state.get("generated_tests"):
-        status = "coverage_complete"
     else:
         status = "accepted" if accepted else "not_accepted"
     report = {

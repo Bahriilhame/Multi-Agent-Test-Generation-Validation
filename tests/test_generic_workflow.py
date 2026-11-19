@@ -169,7 +169,7 @@ def test_critic_findings_block_acceptance_and_target_the_next_iteration(monkeypa
     assert "Expected value contradicts" in result["critic_feedback"]
 
 
-def test_full_coverage_report_skips_generation_as_already_complete(tmp_path):
+def test_full_coverage_does_not_imply_tests_are_accepted(tmp_path):
     result = finalize_node({
         "run_dir": str(tmp_path),
         "coverage_before": 100,
@@ -178,7 +178,7 @@ def test_full_coverage_report_skips_generation_as_already_complete(tmp_path):
         "coverage_available": True,
         "iteration": 0,
     })
-    assert result["final_report"]["status"] == "coverage_complete"
+    assert result["final_report"]["status"] == "not_accepted"
     assert result["final_report"]["coverage_goal"]["status"] == "already_complete"
     assert result["final_report"]["iterations"] == 0
 
@@ -517,27 +517,37 @@ def test_langgraph_retries_then_accepts_with_iteration_bound(tmp_path, monkeypat
     assert result["iteration"] == 1
 
 
-def test_langgraph_stops_when_baseline_coverage_is_already_complete(tmp_path, monkeypatch):
-    counts = {"generate": 0, "finalize": 0}
+def test_langgraph_still_runs_test_cycle_when_baseline_coverage_is_complete(tmp_path, monkeypatch):
+    counts = {"generate": 0, "execute": 0, "critic": 0, "finalize": 0}
 
     def analyze(_state):
         return {"coverage_saturated": True, "coverage_before": 100, "branch_coverage_before": 100}
 
     def generate(_state):
         counts["generate"] += 1
-        raise AssertionError("No generation is needed when line and branch coverage are already complete")
+        return {"generated_tests": "def test_generated(): assert True"}
+
+    def execute(_state):
+        counts["execute"] += 1
+        return {"execution_result": {"exit_code": 0}}
+
+    def critic(_state):
+        counts["critic"] += 1
+        return {"accepted": True}
 
     def finalize(_state):
         counts["finalize"] += 1
         return {"stage": "completed"}
 
     monkeypatch.setattr(generic_workflow, "analyze_node", analyze)
+    monkeypatch.setattr(generic_workflow, "execute_node", execute)
+    monkeypatch.setattr(generic_workflow, "critic_node", critic)
     monkeypatch.setattr(generic_workflow, "generate_node", generate)
     monkeypatch.setattr(generic_workflow, "finalize_node", finalize)
     result = generic_workflow.build_generic_workflow().invoke({
         "project_path": str(tmp_path), "run_dir": str(tmp_path / "run"), "iteration": 0, "max_iterations": 3,
     })
-    assert counts == {"generate": 0, "finalize": 1}
+    assert counts == {"generate": 1, "execute": 1, "critic": 1, "finalize": 1}
     assert result["iteration"] == 0
 
 
