@@ -7,11 +7,13 @@ import pytest
 from adapters.base import ProjectInfo
 from adapters.input_sources import materialize_source
 from agents.generic_pipeline import (
+    _coverage_is_saturated,
     _extract_code,
     _failure_repair_context,
     _merge_retry_tests,
     analyze_node,
     critic_node,
+    finalize_node,
 )
 from experiments.review_project_run import review as review_project_run
 from graph import generic_workflow
@@ -91,6 +93,77 @@ def test_critic_skips_llm_when_pytest_already_failed(monkeypatch):
     assert result["critic_result"]["heuristic_score"] <= 49
     assert result["critic_result"]["raw_heuristic_score"] > 49
     assert "Skipped semantic review" in result["critic_result"]["method"]
+
+
+def test_critic_requires_real_coverage_gain_when_uncovered_code_remains(monkeypatch):
+    response = json.dumps({
+        "score": 100,
+        "dimensions": {"contract": 25, "assertions": 25, "edge_cases": 25, "independence": 25},
+        "issues": [],
+        "summary": "Sound focused test.",
+    })
+    monkeypatch.setattr("agents.generic_pipeline.ask_llm_json", lambda *_args, **_kwargs: response)
+    state = {
+        "generated_tests": "def test_value():\n    assert 2 + 2 == 4\n",
+        "execution_result": {"exit_code": 0, "passed": 1, "failed": 0, "errors": 0, "generated_passed": 1, "generated_failed": 0},
+        "coverage_before": 50,
+        "coverage_after": 50,
+        "branch_coverage_before": 40,
+        "branch_coverage_after": 40,
+        "coverage_available": True,
+        "coverage_saturated": False,
+        "min_quality_score": 70,
+    }
+    result = critic_node(state)
+    assert result["accepted"] is False
+    assert result["critic_result"]["coverage_status"] == "no_improvement"
+    assert any("Coverage did not increase" in item for item in result["critic_result"]["feedback"])
+
+
+def test_critic_accepts_passing_tests_that_raise_line_or_branch_coverage(monkeypatch):
+    response = json.dumps({
+        "score": 100,
+        "dimensions": {"contract": 25, "assertions": 25, "edge_cases": 25, "independence": 25},
+        "issues": [],
+        "summary": "Sound focused test.",
+    })
+    monkeypatch.setattr("agents.generic_pipeline.ask_llm_json", lambda *_args, **_kwargs: response)
+    result = critic_node({
+        "generated_tests": "def test_value():\n    assert 2 + 2 == 4\n",
+        "execution_result": {"exit_code": 0, "passed": 1, "failed": 0, "errors": 0, "generated_passed": 1, "generated_failed": 0},
+        "coverage_before": 50,
+        "coverage_after": 60,
+        "branch_coverage_before": 40,
+        "branch_coverage_after": 40,
+        "coverage_available": True,
+        "coverage_saturated": False,
+        "min_quality_score": 70,
+    })
+    assert result["accepted"] is True
+    assert result["critic_result"]["coverage_status"] == "improved"
+    assert result["best_candidate"]["coverage_after"] == 60
+
+
+def test_full_coverage_report_skips_generation_as_already_complete(tmp_path):
+    result = finalize_node({
+        "run_dir": str(tmp_path),
+        "coverage_before": 100,
+        "branch_coverage_before": 100,
+        "coverage_saturated": True,
+        "coverage_available": True,
+        "iteration": 0,
+    })
+    assert result["final_report"]["status"] == "coverage_complete"
+    assert result["final_report"]["coverage_goal"]["status"] == "already_complete"
+    assert result["final_report"]["iterations"] == 0
+
+
+def test_coverage_saturation_requires_line_and_branch_completion():
+    coverage = {"totals": {"num_statements": 10, "percent_covered": 100, "num_branches": 4, "percent_branches_covered": 100}}
+    assert _coverage_is_saturated(coverage, 0)
+    coverage["totals"]["percent_branches_covered"] = 75
+    assert not _coverage_is_saturated(coverage, 0)
+    assert not _coverage_is_saturated(coverage, 1)
 
 
 def test_analysis_stops_early_when_runner_image_lacks_project_dependencies(tmp_path, monkeypatch):
@@ -417,6 +490,30 @@ def test_langgraph_retries_then_accepts_with_iteration_bound(tmp_path, monkeypat
     assert counts == {"generate": 2, "execute": 2, "critic": 2}
     assert result["accepted"] is True
     assert result["iteration"] == 1
+
+
+def test_langgraph_stops_when_baseline_coverage_is_already_complete(tmp_path, monkeypatch):
+    counts = {"generate": 0, "finalize": 0}
+
+    def analyze(_state):
+        return {"coverage_saturated": True, "coverage_before": 100, "branch_coverage_before": 100}
+
+    def generate(_state):
+        counts["generate"] += 1
+        raise AssertionError("No generation is needed when line and branch coverage are already complete")
+
+    def finalize(_state):
+        counts["finalize"] += 1
+        return {"stage": "completed"}
+
+    monkeypatch.setattr(generic_workflow, "analyze_node", analyze)
+    monkeypatch.setattr(generic_workflow, "generate_node", generate)
+    monkeypatch.setattr(generic_workflow, "finalize_node", finalize)
+    result = generic_workflow.build_generic_workflow().invoke({
+        "project_path": str(tmp_path), "run_dir": str(tmp_path / "run"), "iteration": 0, "max_iterations": 3,
+    })
+    assert counts == {"generate": 0, "finalize": 1}
+    assert result["iteration"] == 0
 
 
 def test_docker_runner_stages_tests_and_enforces_container_policy(tmp_path, monkeypatch):

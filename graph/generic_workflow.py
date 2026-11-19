@@ -44,7 +44,7 @@ def _safe(node):
 
 
 def _after(state):
-    return "finalize" if state.get("run_error") else "generator"
+    return "finalize" if state.get("run_error") or state.get("coverage_saturated") else "generator"
 
 
 def _retry_or_finish(state):

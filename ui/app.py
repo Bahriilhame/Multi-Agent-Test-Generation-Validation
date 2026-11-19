@@ -84,14 +84,35 @@ def render_run_result(run: dict) -> None:
     report_path = Path(run["report_path"]) if run.get("report_path") else None
     report = json.loads(report_path.read_text(encoding="utf-8")) if report_path and report_path.is_file() else {}
     if return_code == 0 and report_path and report_path.is_file():
-        st.success(f"Workflow terminé — {report.get('status', 'statut inconnu')}")
+        if report.get("status") == "coverage_complete":
+            st.success("Couverture déjà complète : aucun gain de pourcentage n’était possible.")
+        elif report.get("status") == "accepted":
+            st.success("Tests générés validés et objectif de couverture atteint.")
+        else:
+            st.warning("Tests générés non acceptés. Consulte les échecs et la meilleure itération ci-dessous.")
         col1, col2, col3 = st.columns(3)
         col1.metric("Statut", report.get("status", "inconnu"))
         before = report.get("coverage_before")
         after = report.get("coverage_after")
         col2.metric("Couverture initiale", f"{before:.1f}%" if before is not None else "n/d")
         col3.metric("Couverture finale", f"{after:.1f}%" if after is not None else "n/d")
-        st.json(report.get("critic", {}))
+        coverage_goal = report.get("coverage_goal", {})
+        if coverage_goal:
+            goal_status = coverage_goal.get("status", "unknown")
+            goal_labels = {
+                "already_complete": "Déjà complète à l’analyse initiale",
+                "improved": "Couverture augmentée par les tests validés",
+                "no_improvement": "Aucun gain de couverture validé",
+                "gain_unvalidated": "Gain observé, mais les tests échouent",
+                "unavailable": "Couverture non mesurable pour ce projet",
+            }
+            st.write(f"Objectif couverture : **{goal_labels.get(goal_status, goal_status)}**")
+            if goal_status == "already_complete":
+                st.info("Les lignes et branches mesurées étaient déjà à 100 %. Il n’y avait pas de hausse de pourcentage possible, donc la génération a été arrêtée.")
+            if coverage_goal.get("best_iteration") is not None:
+                st.write(f"Meilleure itération : **{coverage_goal['best_iteration']}**")
+        if report.get("critic"):
+            st.json(report["critic"])
         st.write(f"Rapport : `{report_path}`")
     else:
         st.error(f"Le workflow s'est terminé avec le code {return_code}.")

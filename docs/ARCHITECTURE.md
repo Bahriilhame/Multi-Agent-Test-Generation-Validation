@@ -27,6 +27,8 @@ The Python runner stages a disposable source copy and a separately generated tes
 3. **Validation executor:** constrained Docker runner, offline network, read-only root and project mount, dropped Linux capabilities, `no-new-privileges`, non-root UID, process/memory/CPU limits, timeout, temporary output mount and container cleanup.
 4. **Relevance critic:** deterministic assertion/execution/coverage checks combined with an Ollama semantic review. It rejects failed tests, a quality score under threshold, missing semantic review or a coverage regression. The loop has a configurable iteration cap.
 
+After each validation, the workflow recomputes uncovered lines and branches. If coverage is measurable and below saturation, automatic acceptance requires a real line or branch coverage gain from passing generated tests. The workflow retains the best candidate across its bounded iterations. If the passing baseline already covers 100% of measured lines and branches, the graph reports `coverage_complete` without making purposeless generation calls.
+
 The critic score is a review aid, not a proof of assertion strength. Mutation testing remains available for the checkout demonstration; generic mutation analysis is future work.
 
 ## Isolation boundary

@@ -47,6 +47,46 @@ def _record_phase(state: dict[str, Any], node: str, status: str, detail: str | N
         stream.flush()
 
 
+def _uncovered_from_coverage(coverage: dict[str, Any]) -> list[dict[str, Any]]:
+    uncovered = []
+    for filename, data in (coverage.get("files") or {}).items():
+        lines = data.get("missing_lines", [])
+        branches = data.get("missing_branches", [])
+        functions = []
+        for name, fn in data.get("functions", {}).items():
+            summary = fn.get("summary", {})
+            missing_lines = fn.get("missing_lines", [])
+            missing_branches = fn.get("missing_branches", [])
+            if summary.get("missing_lines", 0) or summary.get("missing_branches", 0):
+                functions.append({
+                    "name": name,
+                    "missing_lines": missing_lines,
+                    "missing_branches": missing_branches,
+                    "priority": summary.get("missing_lines", 0) + summary.get("missing_branches", 0),
+                })
+        functions.sort(key=lambda function: (-function["priority"], function["name"]))
+        if lines or branches:
+            uncovered.append({
+                "file": filename,
+                "missing_lines": lines,
+                "missing_branches": branches,
+                "functions": functions,
+                "priority": len(lines) + len(branches),
+            })
+    uncovered.sort(key=lambda item: (-item["priority"], item["file"]))
+    return uncovered
+
+
+def _coverage_is_saturated(coverage: dict[str, Any], baseline_exit_code: int) -> bool:
+    totals = coverage.get("totals", {})
+    if baseline_exit_code != 0 or not totals or totals.get("num_statements", 0) == 0:
+        return False
+    line_complete = float(totals.get("percent_covered", 0)) >= 99.999
+    branch_total = int(totals.get("num_branches", 0))
+    branch_complete = branch_total == 0 or float(totals.get("percent_branches_covered", 0)) >= 99.999
+    return line_complete and branch_complete
+
+
 def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
     root = Path(state["project_path"]).expanduser().resolve()
     info = detect_project(root)
@@ -123,21 +163,7 @@ def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
             "Check the project dependency manifest or provide a compatible --docker-image."
         )
     coverage = baseline.get("coverage") or {}
-    uncovered = []
-    for filename, data in coverage.get("files", {}).items():
-        lines = data.get("missing_lines", [])
-        branches = data.get("missing_branches", [])
-        functions = []
-        for name, fn in data.get("functions", {}).items():
-            summary = fn.get("summary", {})
-            missing_lines = fn.get("missing_lines", [])
-            missing_branches = fn.get("missing_branches", [])
-            if summary.get("missing_lines", 0) or summary.get("missing_branches", 0):
-                functions.append({"name": name, "missing_lines": missing_lines, "missing_branches": missing_branches, "priority": summary.get("missing_lines", 0) + summary.get("missing_branches", 0)})
-        functions.sort(key=lambda function: (-function["priority"], function["name"]))
-        if lines or branches:
-            uncovered.append({"file": filename, "missing_lines": lines, "missing_branches": branches, "functions": functions, "priority": len(lines) + len(branches)})
-    uncovered.sort(key=lambda item: (-item["priority"], item["file"]))
+    uncovered = _uncovered_from_coverage(coverage)
     test_paths = adapter.discover_tests(root)
     existing_test_names = []
     existing_test_summaries = []
@@ -157,6 +183,8 @@ def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
     return {
         "project_info": info.to_dict(), "adapter": "python", "coverage_before": coverage.get("totals", {}).get("percent_covered", 0),
         "branch_coverage_before": coverage.get("totals", {}).get("percent_branches_covered", 0),
+        "coverage_available": bool(coverage.get("totals")),
+        "coverage_saturated": _coverage_is_saturated(coverage, int(baseline.get("exit_code", 1))),
         "uncovered_details": uncovered, "coverage_before_report": {"totals": coverage.get("totals", {}), "files": coverage.get("files", {})},
         "baseline_results": {k: v for k, v in baseline.items() if k != "output"},
         "docker_image": docker_image,
@@ -300,8 +328,6 @@ def _merge_retry_tests(
     project_root: Path | None = None,
 ) -> str:
     """Retain prior passing tests and swap only functions pytest marked as failing."""
-    if not failed_names:
-        return replacement_code
     previous_tree = ast.parse(previous_code)
     replacement_tree = ast.parse(replacement_code)
     failed = set(failed_names)
@@ -434,14 +460,20 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     previous_execution = state.get("execution_result", {})
     failed_names = previous_execution.get("generated_failed_tests", [])
     passing_names = previous_execution.get("generated_passed_tests", [])
-    if previous_code and failed_names:
-        prior = (
-            prior
-            + "\nReplace only these failed generated tests: " + ", ".join(failed_names)
-            + "\nThe passing generated tests are retained automatically: " + ", ".join(passing_names)
-            + "\n"
-            + _failure_repair_context(previous_code, previous_execution.get("failure_details", ""))
-        )
+    if previous_code and previous_execution:
+        if failed_names:
+            prior = (
+                prior
+                + "\nReplace only these failed generated tests: " + ", ".join(failed_names)
+                + "\nThe passing generated tests are retained automatically: " + ", ".join(passing_names)
+                + "\n"
+                + _failure_repair_context(previous_code, previous_execution.get("failure_details", ""))
+            )
+        else:
+            prior = (
+                prior
+                + "\nAll previous generated tests passed and will be retained. Add only new tests that target the remaining uncovered lines or branches; do not repeat previous test names or behaviors."
+            )
     existing = state.get("existing_tests_context", "") or "\n".join(state.get("existing_test_files", []))
     prompt = build_generic_generation_prompt(
         source=context, uncovered=state.get("uncovered_details", []), existing_tests=existing,
@@ -461,7 +493,7 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
         )
         response = ask_llm(repair_prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=600)
         code = _extract_code(response, state.get("existing_test_names", []), Path(state["project_path"]))
-    if previous_code and failed_names:
+    if previous_code and previous_execution:
         code = _merge_retry_tests(
             previous_code,
             code,
@@ -483,7 +515,34 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
 def execute_node(state: dict[str, Any]) -> dict[str, Any]:
     result = run_in_docker(state["project_path"], Path(state["run_dir"]) / f"iteration-{state.get('iteration', 0)}", state["generated_tests"], timeout_seconds=int(state.get("timeout_seconds", 120)), image=state.get("docker_image", "smarttest-runner:latest"))
     result.pop("output", None)
-    return {"execution_result": result, "coverage_after": (result.get("coverage") or {}).get("totals", {}).get("percent_covered"), "stage": "executed"}
+    coverage = result.get("coverage") or {}
+    return {
+        "execution_result": result,
+        "coverage_after": coverage.get("totals", {}).get("percent_covered"),
+        "branch_coverage_after": coverage.get("totals", {}).get("percent_branches_covered"),
+        "coverage_available": bool(coverage.get("totals")) or state.get("coverage_available", False),
+        "uncovered_details": (
+            _uncovered_from_coverage(coverage)
+            if coverage.get("totals")
+            else state.get("uncovered_details", [])
+        ),
+        "stage": "executed",
+    }
+
+
+def _candidate_rank(candidate: dict[str, Any]) -> tuple[float, ...]:
+    execution = candidate.get("execution", {})
+    critic = candidate.get("critic", {})
+    generated_total = int(execution.get("generated_passed", 0)) + int(execution.get("generated_failed", 0))
+    pass_rate = int(execution.get("generated_passed", 0)) / max(1, generated_total)
+    all_pass = execution.get("exit_code") == 0 and int(execution.get("generated_failed", 0)) == 0
+    return (
+        float(all_pass),
+        pass_rate,
+        float(candidate.get("coverage_after") or 0),
+        float(candidate.get("branch_coverage_after") or 0),
+        float(critic.get("score") or 0),
+    )
 
 
 def critic_node(state: dict[str, Any]) -> dict[str, Any]:
@@ -557,33 +616,109 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
         feedback.append(f"Combined quality score {score:.1f} is below the required {threshold:.1f}.")
     before = state.get("coverage_before")
     after = state.get("coverage_after")
-    coverage_not_regressed = before is None or after is None or float(after) >= float(before)
+    branch_before = state.get("branch_coverage_before")
+    branch_after = state.get("branch_coverage_after")
+    coverage_not_regressed = (
+        (before is None or after is None or float(after) >= float(before))
+        and (branch_before is None or branch_after is None or float(branch_after) >= float(branch_before))
+    )
     if not coverage_not_regressed:
-        feedback.append(f"Coverage regressed from {before}% to {after}%; add tests to retain baseline coverage.")
+        feedback.append(f"Line/branch coverage regressed (lines {before}% → {after}%, branches {branch_before}% → {branch_after}%); add tests to retain baseline coverage.")
+    coverage_saturated = bool(state.get("coverage_saturated"))
+    coverage_available = bool(state.get("coverage_available"))
+    line_improved = before is not None and after is not None and float(after) > float(before) + 0.001
+    branch_improved = branch_before is not None and branch_after is not None and float(branch_after) > float(branch_before) + 0.001
+    coverage_improved = line_improved or branch_improved
+    tests_pass = execution.get("exit_code") == 0 and generated_failed == 0
+    coverage_goal_met = coverage_saturated or not coverage_available or (tests_pass and coverage_improved)
+    if coverage_saturated:
+        coverage_status = "already_complete"
+    elif not coverage_available:
+        coverage_status = "unavailable"
+    elif coverage_improved and tests_pass:
+        coverage_status = "improved"
+    elif coverage_improved:
+        coverage_status = "gain_unvalidated"
+    else:
+        coverage_status = "no_improvement"
+        feedback.append(
+            f"Coverage did not increase from {before}% lines / {branch_before}% branches. "
+            "Target the remaining uncovered lines and branches in the next iteration."
+        )
     critic_blockers = [issue for issue in semantic_issues if issue.startswith("critical issue")]
     if critic_blockers:
         feedback.append("The critic found a grounded critical/major issue; repair it before acceptance.")
-    accepted = execution.get("exit_code") == 0 and len(tests) > 0 and score >= threshold and semantic_score is not None and coverage_not_regressed and not critic_blockers
+    accepted = execution.get("exit_code") == 0 and len(tests) > 0 and score >= threshold and semantic_score is not None and coverage_not_regressed and coverage_goal_met and not critic_blockers
     if semantic_score is None:
         feedback.append("Semantic review was skipped because pytest failures must be repaired first.")
-    result = {"score": score, "heuristic_score": heuristic_score, "raw_heuristic_score": raw_heuristic_score, "semantic_score": semantic_score, "semantic_dimensions": semantic_dimensions, "semantic_unsupported_issues": semantic_unsupported, "accepted": accepted, "test_functions": len(tests), "assertions": assertions, "generated_tests_passed": generated_passed, "generated_tests_failed": generated_failed, "generated_passed_tests": execution.get("generated_passed_tests", []), "generated_failed_tests": execution.get("generated_failed_tests", []), "execution_pass_rate": round(100 * executed_ratio, 2), "feedback": feedback, "method": semantic_method, "duration_seconds": critic_duration}
-    return {"critic_result": result, "critic_feedback": "\n".join(feedback), "accepted": accepted, "stage": "criticized"}
+    result = {"score": score, "heuristic_score": heuristic_score, "raw_heuristic_score": raw_heuristic_score, "semantic_score": semantic_score, "semantic_dimensions": semantic_dimensions, "semantic_unsupported_issues": semantic_unsupported, "accepted": accepted, "test_functions": len(tests), "assertions": assertions, "generated_tests_passed": generated_passed, "generated_tests_failed": generated_failed, "generated_passed_tests": execution.get("generated_passed_tests", []), "generated_failed_tests": execution.get("generated_failed_tests", []), "execution_pass_rate": round(100 * executed_ratio, 2), "coverage_status": coverage_status, "coverage_goal_met": coverage_goal_met, "coverage_improved": coverage_improved, "feedback": feedback, "method": semantic_method, "duration_seconds": critic_duration}
+    candidate = {
+        "iteration": int(state.get("iteration", 0)) + 1,
+        "generated_tests": code,
+        "execution": execution,
+        "critic": result,
+        "coverage_after": after,
+        "branch_coverage_after": branch_after,
+    }
+    previous_best = state.get("best_candidate")
+    best_candidate = candidate if previous_best is None or _candidate_rank(candidate) > _candidate_rank(previous_best) else previous_best
+    return {"critic_result": result, "critic_feedback": "\n".join(feedback), "accepted": accepted, "best_candidate": best_candidate, "stage": "criticized"}
 
 
 def finalize_node(state: dict[str, Any]) -> dict[str, Any]:
     run_dir = Path(state["run_dir"])
+    best = state.get("best_candidate")
+    if best:
+        coverage_after = best.get("coverage_after")
+        branch_after = best.get("branch_coverage_after")
+        critic = best.get("critic")
+        execution = best.get("execution")
+        accepted = bool(critic and critic.get("accepted"))
+        best_iteration = best.get("iteration")
+        best_tests_path = run_dir / "generated_tests" / "test_generated_best.py"
+        best_tests_path.parent.mkdir(parents=True, exist_ok=True)
+        best_tests_path.write_text(best.get("generated_tests", "") + "\n", encoding="utf-8")
+    else:
+        coverage_after = state.get("coverage_after", state.get("coverage_before"))
+        branch_after = state.get("branch_coverage_after", state.get("branch_coverage_before"))
+        critic = state.get("critic_result")
+        execution = state.get("execution_result")
+        accepted = bool(state.get("accepted"))
+        best_iteration = None
+        best_tests_path = None
+    coverage_saturated = bool(state.get("coverage_saturated"))
+    coverage_status = (
+        critic.get("coverage_status") if critic else
+        "already_complete" if coverage_saturated else
+        "unavailable" if not state.get("coverage_available") else "no_improvement"
+    )
+    if state.get("run_error"):
+        status = "error"
+    elif coverage_saturated and not state.get("generated_tests"):
+        status = "coverage_complete"
+    else:
+        status = "accepted" if accepted else "not_accepted"
     report = {
         "run_id": state.get("run_id"), "project": state.get("project_info"), "adapter": state.get("adapter"),
-        "status": "error" if state.get("run_error") else ("accepted" if state.get("accepted") else "not_accepted"), "coverage_before": state.get("coverage_before"),
-        "coverage_after": state.get("coverage_after"), "branch_coverage_before": state.get("branch_coverage_before"),
-        "branch_coverage_after": (state.get("execution_result", {}).get("coverage") or {}).get("totals", {}).get("percent_branches_covered"),
-        "coverage_delta_percentage_points": round(float(state.get("coverage_after", 0)) - float(state.get("coverage_before", 0)), 2) if state.get("coverage_after") is not None else None,
+        "status": status, "coverage_before": state.get("coverage_before"),
+        "coverage_after": coverage_after, "branch_coverage_before": state.get("branch_coverage_before"),
+        "branch_coverage_after": branch_after,
+        "coverage_delta_percentage_points": round(float(coverage_after) - float(state.get("coverage_before", 0)), 2) if coverage_after is not None else None,
+        "coverage_goal": {
+            "status": coverage_status,
+            "already_complete_at_baseline": coverage_saturated,
+            "improved": bool(critic and critic.get("coverage_improved")),
+            "target_met": bool(critic and critic.get("coverage_goal_met")) or coverage_saturated,
+            "best_iteration": best_iteration,
+        },
+        "best_generated_tests_file": str(best_tests_path) if best_tests_path else None,
         "generation_duration_seconds": state.get("generation_duration_seconds"),
-        "critic": state.get("critic_result"), "execution": state.get("execution_result"), "iterations": state.get("iteration", 0) + 1,
+        "critic": critic, "execution": execution,
+        "iterations": state.get("iteration", 0) + 1 if state.get("generated_tests") else 0,
         "errors": state.get("errors", []), "limitations": ["Python adapter only", "quality score is deterministic heuristic, not a semantic proof", "container isolation depends on Docker daemon/kernel security"],
     }
     (run_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     (run_dir / "report.md").write_text(
         "# SmartTest-AI run\n\n" + "```json\n" + json.dumps(report, ensure_ascii=False, indent=2) + "\n```\n", encoding="utf-8"
     )
-    return {"final_report": report, "stage": "completed"}
+    return {"final_report": report, "accepted": accepted, "stage": "completed"}
