@@ -554,9 +554,11 @@ def test_langgraph_still_runs_test_cycle_when_baseline_coverage_is_complete(tmp_
 def test_docker_runner_stages_tests_and_enforces_container_policy(tmp_path, monkeypatch):
     project = tmp_path / "project"
     project.mkdir()
-    (project / "app.py").write_text("def add(a, b): return a + b\n", encoding="utf-8")
+    src_package = project / "src" / "sample_package"
+    src_package.mkdir(parents=True)
+    (src_package / "__init__.py").write_text("def add(a, b): return a + b\n", encoding="utf-8")
     (project / "tests").mkdir()
-    (project / "tests" / "test_app.py").write_text("from app import add\ndef test_add(): assert add(1, 2) == 3\n", encoding="utf-8")
+    (project / "tests" / "test_app.py").write_text("from sample_package import add\ndef test_add(): assert add(1, 2) == 3\n", encoding="utf-8")
     (project / ".env").write_text("SECRET=hidden\n", encoding="utf-8")
     calls = []
 
@@ -581,6 +583,7 @@ def test_docker_runner_stages_tests_and_enforces_container_policy(tmp_path, monk
     docker_run = next(call for call in calls if len(call) > 1 and call[1] == "run")
     for flag in ("--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "--cpus", "--pids-limit", "--user"):
         assert flag in docker_run
+    assert "PYTHONPATH=/opt/project-dependencies:/app/src:/app" in docker_run
     assert "/app" in docker_run
     assert "/app/smarttest_generated/test_generated.py" not in docker_run
     assert result["exit_code"] == 0

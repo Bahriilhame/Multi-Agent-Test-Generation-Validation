@@ -107,6 +107,9 @@ def run_in_docker(
         "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m,mode=1777",
         "--mount", f"type=bind,source={app},target=/app,readonly",
         "--mount", f"type=bind,source={results},target=/tmp/test-results",
+        # Support both flat repositories and the standard setuptools ``src/`` layout.
+        # Keep the auto-built image's dependency target on PYTHONPATH as well.
+        "-e", "PYTHONPATH=/opt/project-dependencies:/app/src:/app",
         "-e", "PYTHONDONTWRITEBYTECODE=1", "-e", "PYTEST_ADDOPTS=-p no:cacheprovider",
         "-e", "COVERAGE_FILE=/tmp/test-results/.coverage",
         image, "python", "-m", "pytest", "/app", "-v", "-p", "no:cacheprovider",
