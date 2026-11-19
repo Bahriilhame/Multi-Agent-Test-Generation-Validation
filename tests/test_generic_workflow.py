@@ -246,6 +246,13 @@ def test_retry_feedback_includes_failed_test_body_and_direct_repair_instruction(
     assert "test_duplicate" in feedback
     assert "client.get('/user/same')" in feedback
     assert "replaced or corrected" in feedback.lower()
+    feedback = _failure_repair_context(
+        code,
+        details + "\nE sqlalchemy.exc.IntegrityError: UNIQUE constraint failed: user.username",
+    )
+    assert "from sqlalchemy.exc import IntegrityError" in feedback
+    assert "pytest.raises(IntegrityError)" in feedback
+    assert "do not assert status_code 400" in feedback
     assert "Failing test test_generated" not in feedback
 
 
@@ -258,7 +265,8 @@ def test_retry_merge_keeps_passing_tests_and_replaces_only_failed_tests():
     )
     replacement = (
         "import pytest\n"
-        "def test_failed(client):\n    with pytest.raises(ValueError):\n        client.bad()\n"
+        "client = object()\n"
+        "def test_failed():\n    with pytest.raises(ValueError):\n        client.bad()\n"
         "def test_another(client): assert client is not None\n"
     )
     merged = _merge_retry_tests(previous, replacement, ["test_failed"])
@@ -266,6 +274,8 @@ def test_retry_merge_keeps_passing_tests_and_replaces_only_failed_tests():
     assert "pytest.raises(ValueError)" in merged
     assert merged.count("def test_passed") == 1
     assert "def test_another" in merged
+    assert "def test_failed(client):" in merged
+    assert "client = object()" not in merged
 
 
 def test_live_status_summarizes_running_and_completed_steps(tmp_path):

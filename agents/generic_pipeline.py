@@ -280,6 +280,13 @@ def _failure_repair_context(code: str, failure_details: str) -> str:
         "unless the test explicitly expects that exception."
         )
     ]
+    if "integrityerror" in failure_details.lower() and "unique constraint failed" in failure_details.lower():
+        context.append(
+            "Observed database behavior: the duplicate request raises a SQLAlchemy IntegrityError before an HTTP response exists. "
+            "For a test of the current behavior, add `from sqlalchemy.exc import IntegrityError` and put the duplicate request inside "
+            "pytest.raises(IntegrityError); do not assert status_code 400. "
+            "If you do not want to characterize this exception, replace the case with a different valid input."
+        )
     for name in names[:3]:
         context.append(f"Failing test {name}:\n{definitions.get(name, '(source unavailable)')}")
     return "\n".join(context)[:900]
@@ -300,6 +307,15 @@ def _merge_retry_tests(
     failed = set(failed_names)
     body = []
     previous_test_names = set()
+    fixture_names = {
+        node.name
+        for node in previous_tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(
+            isinstance(decorator, ast.Attribute) and decorator.attr == "fixture"
+            for decorator in node.decorator_list
+        )
+    }
     for node in previous_tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
             if node.name in failed:
@@ -322,9 +338,26 @@ def _merge_retry_tests(
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
             if node.name in previous_test_names or node.name in (existing_test_names or []):
                 continue
+            arguments = {
+                arg.arg
+                for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+            }
+            referenced = {item.id for item in ast.walk(node) if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Load)}
+            node.args.args.extend(
+                ast.arg(arg=name)
+                for name in sorted((referenced & fixture_names) - arguments)
+            )
             body.append(node)
             previous_test_names.add(node.name)
             continue
+        if isinstance(node, ast.Assign):
+            assigned_names = {
+                target.id
+                for target in ast.walk(node)
+                if isinstance(target, ast.Name) and isinstance(target.ctx, ast.Store)
+            }
+            if assigned_names & seen_definitions:
+                continue
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             if node.name in seen_definitions:
                 continue
