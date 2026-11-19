@@ -102,7 +102,6 @@ def run_in_docker(
         "-e", "PYTHONDONTWRITEBYTECODE=1", "-e", "PYTEST_ADDOPTS=-p no:cacheprovider",
         "-e", "COVERAGE_FILE=/tmp/test-results/.coverage",
         image, "python", "-m", "pytest", "/app", "-v", "-p", "no:cacheprovider",
-        "/app/smarttest_generated/test_generated.py",
         "--cov=/app", "--cov-config=/tmp/test-results/coverage.ini", "--cov-branch", "--cov-report=json:/tmp/test-results/coverage.json",
         "--cov-report=term-missing",
     ]

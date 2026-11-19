@@ -46,7 +46,7 @@ docker build -t flasktasks-runner .
 python platform_cli.py run https://github.com/organisation/flasktasks.git --docker-image flasktasks-runner
 ```
 
-Le fichier réutilisable `sandbox/runner/Dockerfile.project` fait la même chose : depuis la racine de SmartTest-AI, passe-le avec `-f` et utilise la racine du dépôt comme contexte Docker.
+Le fichier réutilisable `sandbox/runner/Dockerfile.project` installe `requirements.txt` et tout `requirements*.txt` présent dans le contexte. Cela permet aussi d'ajouter un `requirements.extra.txt` si le dépôt a oublié une dépendance. Par exemple, le module Python `flask_sqlalchemy` provient du paquet pip `Flask-SQLAlchemy`.
 
 Dans l'interface, saisis `flasktasks-runner` dans le champ de l'image Docker. L'analyse s'arrête avec le nom des modules manquants si l'image ne contient pas les dépendances nécessaires.
 

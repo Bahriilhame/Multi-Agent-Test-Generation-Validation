@@ -2,7 +2,9 @@
 FROM smarttest-runner:latest
 
 USER root
-COPY requirements.txt /tmp/project-requirements.txt
-RUN pip install --no-cache-dir -r /tmp/project-requirements.txt
+COPY requirements*.txt /tmp/project-requirements/
+RUN for requirements_file in /tmp/project-requirements/*.txt; do \
+        pip install --no-cache-dir -r "$requirements_file"; \
+    done
 
 USER tester

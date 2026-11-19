@@ -27,27 +27,31 @@ def _compact_uncovered(uncovered: list[dict], *, max_chars: int = 1500) -> str:
     return json.dumps(selected, ensure_ascii=False, separators=(",", ":"))
 
 
-def build_generic_generation_prompt(*, source: str, uncovered: list[dict], existing_tests: str, feedback: str, task_context: str) -> str:
-    return f"""You are a senior Python test engineer. Generate additional pytest tests for this project.
-Return only Python test code. Do not alter production code. Use behavior justified by the source; cover normal, boundary, invalid and exception cases where source semantics support them. Use meaningful assertions, deterministic data and parametrization where useful. Avoid duplicating existing tests. Do not use filesystem, process, network or shell access. Tests must import project code correctly.
+def build_generic_generation_prompt(
+    *, source: str, uncovered: list[dict], existing_tests: str,
+    existing_test_names: list[str] | None = None, feedback: str, task_context: str,
+) -> str:
+    return f"""You are a senior Python test engineer. Generate 2-4 concise additional pytest tests for this project.
+Return only Python test code, under 450 tokens. Do not alter production code. On retries, fix the concrete pytest error in the prior feedback. Do not copy fixtures from existing test modules into this separate generated module; include every import for fixtures you define. Use behavior justified by the source; cover normal, boundary, invalid and exception cases where source semantics support them. Use meaningful assertions, deterministic data and parametrization where useful. Avoid duplicating existing tests. Do not use filesystem, process, network or shell access. Tests must import project code correctly.
 
 Existing tests (avoid duplicating covered behaviors):
-{existing_tests[:1600]}
+Existing test function names (never repeat these): {", ".join((existing_test_names or [])[:100])}
+{existing_tests[:1000]}
 Uncovered source lines/functions (coverage is not a behavior specification):
-{_compact_uncovered(uncovered)}
+{_compact_uncovered(uncovered, max_chars=900)}
 Critic feedback to address on this iteration:
-{feedback[:500]}
+{feedback[:1000]}
 Issue/task context (if supplied; source code remains authoritative for visible behavior):
-{task_context[:500]}
+{task_context[:300]}
 Source context:
-{source[:3500]}
+{source[:2500]}
 """
 
 
 def build_generic_critic_prompt(*, source: str, task_context: str, tests: str, execution: dict | None = None) -> str:
     return f"""Review whether these generated tests meaningfully verify the supplied Python source. Return only compact JSON matching exactly this schema:
 {{"score":0,"dimensions":{{"contract":0,"assertions":0,"edge_cases":0,"independence":0}},"issues":[{{"test_name":"exact test function name","severity":"critical|major|minor","evidence":"exact non-empty substring copied from the test code","reason":"short factual issue","suggestion":"short fix"}}],"summary":"short summary"}}
-Each dimension is an integer 0-25 and score MUST equal their sum. For a generally sound suite, scores should usually be 18-25 per dimension; do not use very low scores for a localized improvement. Every issue must cite an exact substring and exact test function name. Omit any issue without direct textual evidence. Do not claim a scenario is absent if it is present. A test for an invalid input is relevant when the source explicitly validates and rejects it. Do not critique filename conventions or style. Flag incorrect expected values, trivial checks, redundancy, unjustified inputs and missing meaningful edge cases. Passing pytest is not sufficient evidence of relevance.
+Each dimension is an integer 0-25 and score MUST equal their sum. For a generally sound suite, scores should usually be 18-25 per dimension; do not use very low scores for a localized improvement. Report at most the two highest-impact issues. Keep the summary and each reason/suggestion brief. Every issue must cite an exact substring and exact test function name. Omit any issue without direct textual evidence. Do not claim a scenario is absent if it is present. A test for an invalid input is relevant when the source explicitly validates and rejects it. Do not critique filename conventions or style. Flag incorrect expected values, trivial checks, redundancy, unjustified inputs and missing meaningful edge cases. Passing pytest is not sufficient evidence of relevance.
 
 SOURCE:
 {source[:5000]}

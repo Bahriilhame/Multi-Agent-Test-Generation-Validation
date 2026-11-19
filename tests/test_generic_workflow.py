@@ -6,7 +6,7 @@ import pytest
 
 from adapters.base import ProjectInfo
 from adapters.input_sources import materialize_source
-from agents.generic_pipeline import _extract_code, analyze_node
+from agents.generic_pipeline import _extract_code, analyze_node, critic_node
 from experiments.review_project_run import review as review_project_run
 from graph import generic_workflow
 from sandbox.generic_runner import _failure_details, _summary_count, run_in_docker
@@ -20,6 +20,21 @@ def test_generated_test_code_requires_assertive_pytest_function():
     assert "test_value" in _extract_code("```python\ndef test_value():\n    assert 2 == 2\n```")
     with pytest.raises(ValueError, match="no pytest"):
         _extract_code("def helper():\n    return 1")
+    with pytest.raises(ValueError, match="duplicate existing test functions"):
+        _extract_code("def test_existing():\n    assert True\n", ["test_existing"])
+
+
+def test_generated_test_code_adds_import_for_project_symbol_used_in_fixture(tmp_path):
+    (tmp_path / "config.py").write_text("class TestConfig:\n    TESTING = True\n", encoding="utf-8")
+    (tmp_path / "app.py").write_text("def create_app(config):\n    return config\n", encoding="utf-8")
+    code = _extract_code(
+        "import pytest\n"
+        "@pytest.fixture\n"
+        "def client():\n    return create_app(TestConfig)\n"
+        "def test_client(client):\n    assert client is not None\n",
+        project_root=tmp_path,
+    )
+    assert "from config import TestConfig" in code
 
 
 def test_generation_prompt_stays_within_small_model_context_budget():
@@ -35,11 +50,29 @@ def test_generation_prompt_stays_within_small_model_context_budget():
             for index in range(100)
         ],
         existing_tests="def test_existing():\n    assert True\n" * 1000,
-        feedback="feedback " * 1000,
+        existing_test_names=["test_existing"],
+        feedback="NameError: TestConfig is not defined\n" + "feedback " * 1000,
         task_context="context " * 1000,
     )
-    assert len(prompt) < 10_000
+    assert len(prompt) < 7_000
     assert "module_0.py" in prompt
+    assert "test_existing" in prompt
+    assert "NameError: TestConfig is not defined" in prompt
+
+
+def test_critic_skips_llm_when_pytest_already_failed(monkeypatch):
+    def unexpected_llm_call(*_args, **_kwargs):
+        raise AssertionError("Semantic review should be skipped after objective failures")
+
+    monkeypatch.setattr("agents.generic_pipeline.ask_llm_json", unexpected_llm_call)
+    result = critic_node({
+        "generated_tests": "def test_bad():\n    assert 1 == 2\n",
+        "execution_result": {"exit_code": 1, "failed": 1, "errors": 0, "generated_failed": 1, "failure_details": "assertion failed"},
+        "coverage_before": 10,
+        "coverage_after": 10,
+    })
+    assert result["accepted"] is False
+    assert "Skipped semantic review" in result["critic_result"]["method"]
 
 
 def test_analysis_stops_early_when_runner_image_lacks_project_dependencies(tmp_path, monkeypatch):
@@ -50,10 +83,33 @@ def test_analysis_stops_early_when_runner_image_lacks_project_dependencies(tmp_p
     monkeypatch.setattr("agents.generic_pipeline.detect_project", lambda _root: info)
     monkeypatch.setattr(
         "agents.generic_pipeline.run_in_docker",
-        lambda *_args, **_kwargs: {"missing_dependencies": ["flask"]},
+        lambda *_args, **_kwargs: {"missing_dependencies": ["flask_sqlalchemy"]},
     )
-    with pytest.raises(RuntimeError, match="missing project dependencies: flask"):
+    with pytest.raises(RuntimeError, match="missing project dependencies: flask_sqlalchemy") as error:
         analyze_node({"project_path": str(tmp_path), "run_dir": str(tmp_path / "run")})
+    assert "Flask-SQLAlchemy" in str(error.value)
+    assert "requirements.extra.txt" in str(error.value)
+
+
+def test_analysis_passes_existing_test_names_without_copying_test_bodies(tmp_path, monkeypatch):
+    (tmp_path / "app.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    (tmp_path / "test_app.py").write_text(
+        "def test_existing_add():\n    assert add(1, 2) == 3\n",
+        encoding="utf-8",
+    )
+    info = ProjectInfo(
+        root=str(tmp_path), name="sample", languages=["Python"],
+        source_files=["app.py"], test_files=["test_app.py"], supported=True, adapter="python",
+    )
+    monkeypatch.setattr("agents.generic_pipeline.detect_project", lambda _root: info)
+    monkeypatch.setattr(
+        "agents.generic_pipeline.run_in_docker",
+        lambda *_args, **_kwargs: {"missing_dependencies": [], "coverage": {"totals": {}, "files": {}}},
+    )
+    result = analyze_node({"project_path": str(tmp_path), "run_dir": str(tmp_path / "run")})
+    assert result["existing_test_names"] == ["test_existing_add"]
+    assert "test_app.py: test_existing_add" in result["existing_tests_context"]
+    assert "add(1, 2)" not in result["existing_tests_context"]
 
 
 def test_generated_test_code_rejects_process_and_network_imports():
@@ -245,5 +301,7 @@ def test_docker_runner_stages_tests_and_enforces_container_policy(tmp_path, monk
     docker_run = next(call for call in calls if len(call) > 1 and call[1] == "run")
     for flag in ("--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "--cpus", "--pids-limit", "--user"):
         assert flag in docker_run
+    assert "/app" in docker_run
+    assert "/app/smarttest_generated/test_generated.py" not in docker_run
     assert result["exit_code"] == 0
     assert result["container_policy"]["network"] == "none"

@@ -49,6 +49,7 @@ class TestingState(TypedDict, total=False):
     adapter: str
     source_context: str
     existing_test_files: list[str]
+    existing_test_names: list[str]
     existing_tests_context: str
     baseline_results: dict[str, Any]
     execution_result: dict[str, Any]

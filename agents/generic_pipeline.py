@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import builtins
 import json
 import re
 import time
@@ -20,6 +21,16 @@ from tools.prompt_templates import (
     build_generic_generation_prompt,
 )
 
+PIP_DISTRIBUTIONS = {
+    "flask_sqlalchemy": "Flask-SQLAlchemy",
+    "bs4": "beautifulsoup4",
+    "PIL": "Pillow",
+    "yaml": "PyYAML",
+    "cv2": "opencv-python",
+    "dotenv": "python-dotenv",
+    "sklearn": "scikit-learn",
+}
+
 
 def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
     root = Path(state["project_path"]).expanduser().resolve()
@@ -31,11 +42,14 @@ def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
     baseline = run_in_docker(root, run_dir / "baseline", "", image=state.get("docker_image", "smarttest-runner:latest"))
     missing_dependencies = baseline.get("missing_dependencies", [])
     if missing_dependencies:
-        names = ", ".join(missing_dependencies)
+        names = ", ".join(
+            f"{module} (pip: {PIP_DISTRIBUTIONS[module]})" if module in PIP_DISTRIBUTIONS else module
+            for module in missing_dependencies
+        )
         raise RuntimeError(
-            f"Runner image is missing project dependencies: {names}. "
-            "Build a custom Docker image with the project's requirements installed, "
-            "then select that image in the UI."
+            f"Runner image is missing project dependencies: {names}. Add the package(s) "
+            "to requirements.txt or requirements.extra.txt, build a custom image with "
+            "sandbox/runner/Dockerfile.project, then select that image in the UI."
         )
     coverage = baseline.get("coverage") or {}
     uncovered = []
@@ -53,22 +67,126 @@ def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
         if lines or branches:
             uncovered.append({"file": filename, "missing_lines": lines, "missing_branches": branches, "functions": functions, "priority": len(lines) + len(branches)})
     uncovered.sort(key=lambda item: (-item["priority"], item["file"]))
+    test_paths = adapter.discover_tests(root)
+    existing_test_names = []
+    existing_test_summaries = []
+    for path in test_paths:
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        names_in_file = [
+            node.name for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")
+        ]
+        existing_test_names.extend(names_in_file)
+        existing_test_summaries.append(
+            f"{path.relative_to(root).as_posix()}: {', '.join(sorted(set(names_in_file))) or 'no test functions detected'}"
+        )
     return {
         "project_info": info.to_dict(), "adapter": "python", "coverage_before": coverage.get("totals", {}).get("percent_covered", 0),
         "branch_coverage_before": coverage.get("totals", {}).get("percent_branches_covered", 0),
         "uncovered_details": uncovered, "coverage_before_report": {"totals": coverage.get("totals", {}), "files": coverage.get("files", {})},
         "baseline_results": {k: v for k, v in baseline.items() if k != "output"},
         "source_context": adapter.generate_test_context(root, info, limit=12_000),
-        "existing_test_files": [str(p.relative_to(root)) for p in adapter.discover_tests(root)],
-        "existing_tests_context": "\n\n".join(
-            f"# {path.relative_to(root).as_posix()}\n{path.read_text(encoding='utf-8', errors='replace')[:5000]}"
-            for path in adapter.discover_tests(root)[:8]
-        )[:12_000],
+        "existing_test_files": [str(p.relative_to(root)) for p in test_paths],
+        "existing_test_names": sorted(set(existing_test_names)),
+        "existing_tests_context": "\n".join(existing_test_summaries[:50]),
         "stage": "analyzed",
     }
 
 
-def _extract_code(response: str) -> str:
+def _module_importable_symbols(project_root: Path) -> dict[str, str]:
+    """Map top-level project symbols to safe Python import statements."""
+    symbols: dict[str, str] = {}
+    for path in sorted(project_root.rglob("*.py")):
+        relative = path.relative_to(project_root)
+        if any(part in {".git", ".venv", "venv", "tests", "test", "smarttest_generated", "__pycache__"} for part in relative.parts):
+            continue
+        if path.name.startswith("test_"):
+            continue
+        module_parts = list(relative.with_suffix("").parts)
+        if module_parts[-1] == "__init__":
+            module_parts.pop()
+        if not module_parts or not all(part.isidentifier() for part in module_parts):
+            continue
+        module = ".".join(module_parts)
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, SyntaxError):
+            continue
+        for node in tree.body:
+            names = []
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.append(node.name)
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                names.extend(target.id for target in targets if isinstance(target, ast.Name))
+            elif isinstance(node, ast.Import):
+                names.extend(alias.asname or alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                names.extend(alias.asname or alias.name for alias in node.names if alias.name != "*")
+            for name in names:
+                symbols.setdefault(name, f"from {module} import {name}")
+    return symbols
+
+
+def _undefined_test_names(tree: ast.Module) -> set[str]:
+    """Find unresolved names referenced by generated pytest functions."""
+    module_names = set(dir(builtins))
+    has_star_import = False
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            module_names.add(node.name)
+        elif isinstance(node, ast.Import):
+            module_names.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            has_star_import = has_star_import or any(alias.name == "*" for alias in node.names)
+            module_names.update(alias.asname or alias.name for alias in node.names if alias.name != "*")
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            module_names.update(target.id for target in targets if isinstance(target, ast.Name))
+
+    if has_star_import:
+        return set()
+
+    undefined = set()
+    for test in (
+        node for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and (
+            node.name.startswith("test_")
+            or any(isinstance(decorator, ast.Attribute) and decorator.attr == "fixture" for decorator in node.decorator_list)
+        )
+    ):
+        local_names = {
+            arg.arg
+            for arg in (*test.args.posonlyargs, *test.args.args, *test.args.kwonlyargs)
+        }
+        if test.args.vararg:
+            local_names.add(test.args.vararg.arg)
+        if test.args.kwarg:
+            local_names.add(test.args.kwarg.arg)
+        loaded_names = set()
+        for node in ast.walk(test):
+            if isinstance(node, ast.Name):
+                if isinstance(node.ctx, ast.Load):
+                    loaded_names.add(node.id)
+                elif isinstance(node.ctx, ast.Store):
+                    local_names.add(node.id)
+            elif isinstance(node, ast.Import):
+                local_names.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                local_names.update(alias.asname or alias.name for alias in node.names if alias.name != "*")
+        undefined.update(loaded_names - module_names - local_names)
+    return undefined
+
+
+def _extract_code(
+    response: str,
+    existing_test_names: list[str] | None = None,
+    project_root: Path | None = None,
+) -> str:
     blocks = re.findall(r"```(?:python)?\s*(.*?)```", response, re.IGNORECASE | re.DOTALL)
     code = "\n\n".join(blocks).strip() if blocks else response.strip()
     tree = ast.parse(code)
@@ -77,6 +195,19 @@ def _extract_code(response: str) -> str:
         raise ValueError("The model response contains no pytest test functions.")
     if len({node.name for node in tests}) != len(tests):
         raise ValueError("Generated tests contain duplicate function names.")
+    duplicate_names = sorted({node.name for node in tests}.intersection(existing_test_names or []))
+    if duplicate_names:
+        raise ValueError(f"Generated tests duplicate existing test functions: {', '.join(duplicate_names)}.")
+    if project_root is not None:
+        unresolved = _undefined_test_names(tree)
+        available_symbols = _module_importable_symbols(project_root)
+        import_lines = [available_symbols[name] for name in sorted(unresolved) if name in available_symbols]
+        unresolved -= set(available_symbols)
+        if unresolved:
+            raise ValueError(f"Generated tests reference undefined name(s): {', '.join(sorted(unresolved))}.")
+        if import_lines:
+            code = "\n".join(import_lines) + "\n" + code
+            tree = ast.parse(code)
     forbidden_calls = {"eval", "exec", "compile", "__import__"}
     forbidden_imports = {"os", "subprocess", "socket", "requests", "urllib", "http", "ftplib", "shutil", "ctypes"}
     for node in ast.walk(tree):
@@ -100,18 +231,22 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     context = state.get("source_context", "")
     prior = state.get("critic_feedback", "")
     existing = state.get("existing_tests_context", "") or "\n".join(state.get("existing_test_files", []))
-    prompt = build_generic_generation_prompt(source=context, uncovered=state.get("uncovered_details", []), existing_tests=existing, feedback=prior, task_context=state.get("task_context", ""))
+    prompt = build_generic_generation_prompt(
+        source=context, uncovered=state.get("uncovered_details", []), existing_tests=existing,
+        existing_test_names=state.get("existing_test_names", []), feedback=prior,
+        task_context=state.get("task_context", ""),
+    )
     generation_started = time.perf_counter()
-    response = ask_llm(prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=700)
+    response = ask_llm(prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=450)
     try:
-        code = _extract_code(response)
+        code = _extract_code(response, state.get("existing_test_names", []), Path(state["project_path"]))
     except (SyntaxError, ValueError) as first_error:
         repair_prompt = (
             prompt + "\n\nYour previous response was invalid: " + str(first_error)
             + "\nRepair it and return only one syntactically valid Python module containing pytest test functions."
         )
-        response = ask_llm(repair_prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=700)
-        code = _extract_code(response)
+        response = ask_llm(repair_prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=450)
+        code = _extract_code(response, state.get("existing_test_names", []), Path(state["project_path"]))
     generation_duration = round(time.perf_counter() - generation_started, 3)
     destination = Path(state["run_dir"]) / "generated_tests" / "test_generated.py"
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -158,26 +293,30 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
     semantic_dimensions: dict[str, float] = {}
     semantic_method = "unavailable"
     critic_started = time.perf_counter()
-    try:
-        raw = ask_llm_json(
-            build_generic_critic_prompt(source=state.get("source_context", ""), task_context=state.get("task_context", ""), tests=code, execution={key: execution.get(key) for key in ("exit_code", "passed", "failed", "errors", "generated_passed", "generated_failed")}),
-            timeout_seconds=180, wall_timeout_seconds=180, max_output_tokens=350,
-        )
-        run_dir = state.get("run_dir")
-        if run_dir:
-            (Path(run_dir) / f"critic_response_iteration-{state.get('iteration', 0)}.txt").write_text(raw, encoding="utf-8")
-        parsed = validate_critic_response(raw, code)
-        if parsed:
-            semantic_score = parsed["score"]
-            semantic_unsupported = parsed["unsupported_issues"]
-            semantic_dimensions = parsed["dimensions"]
-            semantic_issues = [
-                f"{issue['severity']} issue in {issue['test_name']}: {issue['reason']} Fix: {issue['suggestion']} Evidence: {issue['evidence']}"
-                for issue in parsed["issues"][:8]
-            ]
-            semantic_method = "Ollama semantic review plus deterministic AST/pytest evidence"
-    except Exception as error:  # noqa: BLE001 - critic falls back to objective evidence for any Ollama/schema failure.
-        semantic_method = f"Ollama review unavailable: {type(error).__name__}; heuristic retained"
+    objective_failures = execution.get("exit_code") != 0 or failed > 0 or generated_failed > 0
+    if objective_failures:
+        semantic_method = "Skipped semantic review because pytest reported failures; objective feedback retained"
+    else:
+        try:
+            raw = ask_llm_json(
+                build_generic_critic_prompt(source=state.get("source_context", ""), task_context=state.get("task_context", ""), tests=code, execution={key: execution.get(key) for key in ("exit_code", "passed", "failed", "errors", "generated_passed", "generated_failed")}),
+                timeout_seconds=180, wall_timeout_seconds=180, max_output_tokens=350,
+            )
+            run_dir = state.get("run_dir")
+            if run_dir:
+                (Path(run_dir) / f"critic_response_iteration-{state.get('iteration', 0)}.txt").write_text(raw, encoding="utf-8")
+            parsed = validate_critic_response(raw, code)
+            if parsed:
+                semantic_score = parsed["score"]
+                semantic_unsupported = parsed["unsupported_issues"]
+                semantic_dimensions = parsed["dimensions"]
+                semantic_issues = [
+                    f"{issue['severity']} issue in {issue['test_name']}: {issue['reason']} Fix: {issue['suggestion']} Evidence: {issue['evidence']}"
+                    for issue in parsed["issues"][:8]
+                ]
+                semantic_method = "Ollama semantic review plus deterministic AST/pytest evidence"
+        except Exception as error:  # noqa: BLE001 - critic falls back to objective evidence for any Ollama/schema failure.
+            semantic_method = f"Ollama review unavailable: {type(error).__name__}; heuristic retained"
     critic_duration = round(time.perf_counter() - critic_started, 3)
     score = round(0.25 * semantic_score + 0.75 * heuristic_score, 2) if semantic_score is not None else heuristic_score
     feedback.extend(semantic_issues)
