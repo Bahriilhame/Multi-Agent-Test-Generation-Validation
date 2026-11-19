@@ -30,9 +30,20 @@ def _compact_uncovered(uncovered: list[dict], *, max_chars: int = 1500) -> str:
 def build_generic_generation_prompt(
     *, source: str, uncovered: list[dict], existing_tests: str,
     existing_test_names: list[str] | None = None, feedback: str, task_context: str,
+    repair_targets: list[str] | None = None,
+    passing_generated_tests: list[str] | None = None,
 ) -> str:
-    return f"""You are a senior Python test engineer. Generate 2-4 concise additional pytest tests for this project.
-Return only Python test code, under 450 tokens. Do not alter production code. On retries, fix the concrete pytest error in the prior feedback. Do not copy fixtures from existing test modules into this separate generated module; include every import for fixtures you define. Use behavior justified by the source; cover normal, boundary, invalid and exception cases where source semantics support them. Use meaningful assertions, deterministic data and parametrization where useful. Avoid duplicating existing tests. Do not use filesystem, process, network or shell access. Tests must import project code correctly.
+    repair_mode = bool(repair_targets)
+    task = (
+        "Generate only replacement pytest functions for these failed tests: "
+        + ", ".join(repair_targets or [])
+        + ". Successful generated tests are kept by the workflow; do not regenerate or rename them."
+        if repair_mode
+        else "Generate 2-4 concise additional pytest tests for this project."
+    )
+    return f"""You are a senior Python test engineer.
+{task}
+Return only Python test code, under 600 tokens. Do not alter production code. On retries, replace or correct every failed generated test identified in the feedback; do not repeat its failing operation or test body unchanged. Treat pytest exceptions as evidence of actual source behavior, and only assert an exception when the test explicitly expects it. Successful generated tests are retained automatically: {", ".join((passing_generated_tests or [])[:20]) or "none yet"}. Do not copy fixtures from existing test modules into this separate generated module; include every import for fixtures you define. Use behavior justified by the source; cover normal, boundary, invalid and exception cases where source semantics support them. Use meaningful assertions, deterministic data and parametrization where useful. Avoid duplicating existing tests. Do not use filesystem, process, network or shell access. Tests must import project code correctly.
 
 Existing tests (avoid duplicating covered behaviors):
 Existing test function names (never repeat these): {", ".join((existing_test_names or [])[:100])}
@@ -40,11 +51,11 @@ Existing test function names (never repeat these): {", ".join((existing_test_nam
 Uncovered source lines/functions (coverage is not a behavior specification):
 {_compact_uncovered(uncovered, max_chars=900)}
 Critic feedback to address on this iteration:
-{feedback[:1000]}
+{feedback[:1600]}
 Issue/task context (if supplied; source code remains authoritative for visible behavior):
 {task_context[:300]}
 Source context:
-{source[:2500]}
+{source[:2000]}
 """
 
 

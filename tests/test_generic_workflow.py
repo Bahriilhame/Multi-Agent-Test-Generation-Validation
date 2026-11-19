@@ -6,7 +6,13 @@ import pytest
 
 from adapters.base import ProjectInfo
 from adapters.input_sources import materialize_source
-from agents.generic_pipeline import _extract_code, analyze_node, critic_node
+from agents.generic_pipeline import (
+    _extract_code,
+    _failure_repair_context,
+    _merge_retry_tests,
+    analyze_node,
+    critic_node,
+)
 from experiments.review_project_run import review as review_project_run
 from graph import generic_workflow
 from sandbox.dependency_image import build_project_image
@@ -82,6 +88,8 @@ def test_critic_skips_llm_when_pytest_already_failed(monkeypatch):
         "coverage_after": 10,
     })
     assert result["accepted"] is False
+    assert result["critic_result"]["heuristic_score"] <= 49
+    assert result["critic_result"]["raw_heuristic_score"] > 49
     assert "Skipped semantic review" in result["critic_result"]["method"]
 
 
@@ -203,6 +211,17 @@ def test_runner_parses_pytest_counts_and_failure_details():
     assert "failed assertion" in _failure_details(output)
 
 
+def test_runner_extracts_generated_test_pass_and_failure_names():
+    from sandbox.generic_runner import _generated_test_names
+
+    output = (
+        "smarttest_generated/test_generated.py::test_good PASSED\n"
+        "smarttest_generated/test_generated.py::test_bad[param] FAILED\n"
+    )
+    assert _generated_test_names(output, "PASSED") == ["test_good"]
+    assert _generated_test_names(output, "FAILED|ERROR") == ["test_bad"]
+
+
 def test_failure_summary_keeps_test_names_and_short_causes():
     output = """=========================== FAILURES ===========================
 ________________________ test_create_user_duplicate ________________________
@@ -218,6 +237,35 @@ E       AssertionError: assert b'<html>404</html>' == b'Not Found'
     assert "test_create_user_invalid_name" in summary
     assert "response.data == b'Not Found'" in summary
     assert len(summary) < 1200
+
+
+def test_retry_feedback_includes_failed_test_body_and_direct_repair_instruction():
+    code = "def test_duplicate(client):\n    client.get('/user/same')\n    response = client.get('/user/same')\n    assert response.status_code == 400\n"
+    details = "________________ test_duplicate ________________\nE sqlalchemy.exc.IntegrityError: UNIQUE constraint failed"
+    feedback = _failure_repair_context(code, details)
+    assert "test_duplicate" in feedback
+    assert "client.get('/user/same')" in feedback
+    assert "replaced or corrected" in feedback.lower()
+    assert "Failing test test_generated" not in feedback
+
+
+def test_retry_merge_keeps_passing_tests_and_replaces_only_failed_tests():
+    previous = (
+        "import pytest\n"
+        "@pytest.fixture\ndef client(): return object()\n"
+        "def test_passed(client): assert client is not None\n"
+        "def test_failed(client): assert client.bad()\n"
+    )
+    replacement = (
+        "import pytest\n"
+        "def test_failed(client):\n    with pytest.raises(ValueError):\n        client.bad()\n"
+        "def test_another(client): assert client is not None\n"
+    )
+    merged = _merge_retry_tests(previous, replacement, ["test_failed"])
+    assert "def test_passed" in merged
+    assert "pytest.raises(ValueError)" in merged
+    assert merged.count("def test_passed") == 1
+    assert "def test_another" in merged
 
 
 def test_live_status_summarizes_running_and_completed_steps(tmp_path):

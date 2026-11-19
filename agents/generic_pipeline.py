@@ -254,6 +254,86 @@ def _undefined_test_names(tree: ast.Module) -> set[str]:
     return undefined
 
 
+def _failure_repair_context(code: str, failure_details: str) -> str:
+    """Give the next generation the exact failed test and tell it to replace that case."""
+    headers = re.findall(r"(?m)^_{3,}\s*(.*?)\s*_{3,}\s*$", failure_details)
+    names = sorted({
+        match.group(1)
+        for header in headers
+        if (match := re.match(r"(test_[A-Za-z0-9_]+)", header.strip()))
+    })
+    if not names:
+        return "Replace the failing test(s); do not repeat the same failing operation unchanged."
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return "Replace the failing test(s); do not repeat the same failing operation unchanged."
+    definitions = {
+        node.name: ast.get_source_segment(code, node)
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in names
+    }
+    context = [
+        (
+        "These generated tests failed and must be replaced or corrected. Do not copy them unchanged. "
+        "Use the observed exception as evidence of actual behavior; avoid repeating a side effect "
+        "unless the test explicitly expects that exception."
+        )
+    ]
+    for name in names[:3]:
+        context.append(f"Failing test {name}:\n{definitions.get(name, '(source unavailable)')}")
+    return "\n".join(context)[:900]
+
+
+def _merge_retry_tests(
+    previous_code: str,
+    replacement_code: str,
+    failed_names: list[str],
+    existing_test_names: list[str] | None = None,
+    project_root: Path | None = None,
+) -> str:
+    """Retain prior passing tests and swap only functions pytest marked as failing."""
+    if not failed_names:
+        return replacement_code
+    previous_tree = ast.parse(previous_code)
+    replacement_tree = ast.parse(replacement_code)
+    failed = set(failed_names)
+    body = []
+    previous_test_names = set()
+    for node in previous_tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
+            if node.name in failed:
+                continue
+            previous_test_names.add(node.name)
+        body.append(node)
+
+    seen_imports = {ast.dump(node, include_attributes=False) for node in body if isinstance(node, (ast.Import, ast.ImportFrom))}
+    seen_definitions = {
+        node.name for node in body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
+    for node in replacement_tree.body:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            signature = ast.dump(node, include_attributes=False)
+            if signature not in seen_imports:
+                body.append(node)
+                seen_imports.add(signature)
+            continue
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
+            if node.name in previous_test_names or node.name in (existing_test_names or []):
+                continue
+            body.append(node)
+            previous_test_names.add(node.name)
+            continue
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if node.name in seen_definitions:
+                continue
+            seen_definitions.add(node.name)
+        body.append(node)
+    merged = ast.unparse(ast.fix_missing_locations(ast.Module(body=body, type_ignores=[])))
+    return _extract_code(merged, existing_test_names, project_root)
+
+
 def _extract_code(
     response: str,
     existing_test_names: list[str] | None = None,
@@ -317,14 +397,28 @@ def _extract_code(
 def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     context = state.get("source_context", "")
     prior = state.get("critic_feedback", "")
+    previous_code = state.get("generated_tests", "")
+    previous_execution = state.get("execution_result", {})
+    failed_names = previous_execution.get("generated_failed_tests", [])
+    passing_names = previous_execution.get("generated_passed_tests", [])
+    if previous_code and failed_names:
+        prior = (
+            prior
+            + "\nReplace only these failed generated tests: " + ", ".join(failed_names)
+            + "\nThe passing generated tests are retained automatically: " + ", ".join(passing_names)
+            + "\n"
+            + _failure_repair_context(previous_code, previous_execution.get("failure_details", ""))
+        )
     existing = state.get("existing_tests_context", "") or "\n".join(state.get("existing_test_files", []))
     prompt = build_generic_generation_prompt(
         source=context, uncovered=state.get("uncovered_details", []), existing_tests=existing,
         existing_test_names=state.get("existing_test_names", []), feedback=prior,
         task_context=state.get("task_context", ""),
+        repair_targets=failed_names if previous_code else [],
+        passing_generated_tests=passing_names if previous_code else [],
     )
     generation_started = time.perf_counter()
-    response = ask_llm(prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=450)
+    response = ask_llm(prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=600)
     try:
         code = _extract_code(response, state.get("existing_test_names", []), Path(state["project_path"]))
     except (SyntaxError, ValueError) as first_error:
@@ -332,15 +426,25 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
             prompt + "\n\nYour previous response was invalid: " + str(first_error)
             + "\nRepair it and return only one syntactically valid Python module containing pytest test functions."
         )
-        response = ask_llm(repair_prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=450)
+        response = ask_llm(repair_prompt, timeout_seconds=180, max_retries=0, wall_timeout_seconds=240, max_output_tokens=600)
         code = _extract_code(response, state.get("existing_test_names", []), Path(state["project_path"]))
+    if previous_code and failed_names:
+        code = _merge_retry_tests(
+            previous_code,
+            code,
+            failed_names,
+            state.get("existing_test_names", []),
+            Path(state["project_path"]),
+        )
     generation_duration = round(time.perf_counter() - generation_started, 3)
     destination = Path(state["run_dir"]) / "generated_tests" / "test_generated.py"
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists() and state.get("iteration", 0) == 0:
         raise FileExistsError(f"Refusing to overwrite generated test file: {destination}")
+    iteration_file = destination.with_name(f"test_generated_iteration-{state.get('iteration', 0)}.py")
+    iteration_file.write_text(code + "\n", encoding="utf-8")
     destination.write_text(code + "\n", encoding="utf-8")
-    return {"generated_tests": code, "generated_test_file": str(destination), "generated_test_count": sum(1 for n in ast.walk(ast.parse(code)) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name.startswith("test_")), "generation_duration_seconds": generation_duration, "stage": "generated"}
+    return {"generated_tests": code, "generated_test_file": str(destination), "generated_test_iteration_file": str(iteration_file), "generated_test_count": sum(1 for n in ast.walk(ast.parse(code)) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name.startswith("test_")), "generation_duration_seconds": generation_duration, "stage": "generated"}
 
 
 def execute_node(state: dict[str, Any]) -> dict[str, Any]:
@@ -359,17 +463,26 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
     executed_ratio = passed / max(1, passed + failed)
     generated_passed = int(execution.get("generated_passed", 0))
     generated_failed = int(execution.get("generated_failed", 0))
+    objective_failures = execution.get("exit_code") != 0 or failed > 0 or generated_failed > 0
     if generated_passed + generated_failed:
         executed_ratio = generated_passed / (generated_passed + generated_failed)
     assertion_ratio = min(1, assertions / max(1, len(tests)))
     meaningful = sum(1 for test in tests if any(isinstance(n, ast.Assert) for n in ast.walk(test))) / max(1, len(tests))
-    heuristic_score = round(100 * (0.45 * executed_ratio + 0.35 * assertion_ratio + 0.20 * meaningful), 2)
+    raw_heuristic_score = round(100 * (0.45 * executed_ratio + 0.35 * assertion_ratio + 0.20 * meaningful), 2)
+    heuristic_score = min(raw_heuristic_score, 49.0) if objective_failures else raw_heuristic_score
     feedback = []
     if failed:
         feedback.append(f"{failed} generated/existing tests failed or errored; repair the concrete assertion failures below.")
         details = execution.get("failure_details", "")
         if details:
             feedback.append("Concise pytest failure summary:\n" + summarize_failure_details(details))
+            feedback.append(_failure_repair_context(code, details))
+        failed_names = execution.get("generated_failed_tests", [])
+        if failed_names:
+            feedback.append("Replace only these failed generated tests: " + ", ".join(failed_names))
+        passed_names = execution.get("generated_passed_tests", [])
+        if passed_names:
+            feedback.append("Keep these passing generated tests unchanged: " + ", ".join(passed_names))
     if execution.get("missing_dependencies"):
         feedback.append("Container dependency errors (install these in a custom image, not at runtime): " + ", ".join(execution["missing_dependencies"]))
     if not assertions: feedback.append("Add meaningful assertions or exception checks; tests currently do not verify outcomes.")
@@ -380,7 +493,6 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
     semantic_dimensions: dict[str, float] = {}
     semantic_method = "unavailable"
     critic_started = time.perf_counter()
-    objective_failures = execution.get("exit_code") != 0 or failed > 0 or generated_failed > 0
     if objective_failures:
         semantic_method = "Skipped semantic review because pytest reported failures; objective feedback retained"
     else:
@@ -420,8 +532,8 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
         feedback.append("The critic found a grounded critical/major issue; repair it before acceptance.")
     accepted = execution.get("exit_code") == 0 and len(tests) > 0 and score >= threshold and semantic_score is not None and coverage_not_regressed and not critic_blockers
     if semantic_score is None:
-        feedback.append("Semantic review was unavailable; this run cannot be accepted automatically.")
-    result = {"score": score, "heuristic_score": heuristic_score, "semantic_score": semantic_score, "semantic_dimensions": semantic_dimensions, "semantic_unsupported_issues": semantic_unsupported, "accepted": accepted, "test_functions": len(tests), "assertions": assertions, "generated_tests_passed": generated_passed, "generated_tests_failed": generated_failed, "execution_pass_rate": round(100 * executed_ratio, 2), "feedback": feedback, "method": semantic_method, "duration_seconds": critic_duration}
+        feedback.append("Semantic review was skipped because pytest failures must be repaired first.")
+    result = {"score": score, "heuristic_score": heuristic_score, "raw_heuristic_score": raw_heuristic_score, "semantic_score": semantic_score, "semantic_dimensions": semantic_dimensions, "semantic_unsupported_issues": semantic_unsupported, "accepted": accepted, "test_functions": len(tests), "assertions": assertions, "generated_tests_passed": generated_passed, "generated_tests_failed": generated_failed, "generated_passed_tests": execution.get("generated_passed_tests", []), "generated_failed_tests": execution.get("generated_failed_tests", []), "execution_pass_rate": round(100 * executed_ratio, 2), "feedback": feedback, "method": semantic_method, "duration_seconds": critic_duration}
     return {"critic_result": result, "critic_feedback": "\n".join(feedback), "accepted": accepted, "stage": "criticized"}
 
 
