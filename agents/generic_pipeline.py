@@ -459,15 +459,17 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     previous_code = state.get("generated_tests", "")
     previous_execution = state.get("execution_result", {})
     failed_names = previous_execution.get("generated_failed_tests", [])
+    critic_targets = state.get("critic_repair_targets", [])
+    repair_targets = sorted(set(failed_names) | set(critic_targets))
     passing_names = previous_execution.get("generated_passed_tests", [])
     if previous_code and previous_execution:
-        if failed_names:
+        if repair_targets:
             prior = (
                 prior
-                + "\nReplace only these failed generated tests: " + ", ".join(failed_names)
-                + "\nThe passing generated tests are retained automatically: " + ", ".join(passing_names)
+                + "\nReplace only these failed or critic-targeted generated tests: " + ", ".join(repair_targets)
+                + "\nOther passing generated tests are retained automatically: " + ", ".join(passing_names)
                 + "\n"
-                + _failure_repair_context(previous_code, previous_execution.get("failure_details", ""))
+                + (_failure_repair_context(previous_code, previous_execution.get("failure_details", "")) if failed_names else "Use the critic's concrete evidence and suggestions to correct the targeted tests.")
             )
         else:
             prior = (
@@ -479,7 +481,7 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
         source=context, uncovered=state.get("uncovered_details", []), existing_tests=existing,
         existing_test_names=state.get("existing_test_names", []), feedback=prior,
         task_context=state.get("task_context", ""),
-        repair_targets=failed_names if previous_code else [],
+        repair_targets=repair_targets if previous_code else [],
         passing_generated_tests=passing_names if previous_code else [],
     )
     generation_started = time.perf_counter()
@@ -497,7 +499,7 @@ def generate_node(state: dict[str, Any]) -> dict[str, Any]:
         code = _merge_retry_tests(
             previous_code,
             code,
-            failed_names,
+            repair_targets,
             state.get("existing_test_names", []),
             Path(state["project_path"]),
         )
@@ -581,6 +583,7 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
     if len(tests) == 0: feedback.append("No test functions were found.")
     semantic_score = None
     semantic_issues: list[str] = []
+    critic_repair_targets: list[str] = []
     semantic_unsupported: list[dict[str, Any]] = []
     semantic_dimensions: dict[str, float] = {}
     semantic_method = "unavailable"
@@ -600,6 +603,10 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
             if parsed:
                 semantic_score = parsed["score"]
                 semantic_unsupported = parsed["unsupported_issues"]
+                critic_repair_targets = sorted({
+                    issue["test_name"] for issue in parsed["issues"]
+                    if issue.get("test_name") in {test.name for test in tests}
+                })
                 semantic_dimensions = parsed["dimensions"]
                 semantic_issues = [
                     f"{issue['severity']} issue in {issue['test_name']}: {issue['reason']} Fix: {issue['suggestion']} Evidence: {issue['evidence']}"
@@ -645,9 +652,9 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
             f"Coverage did not increase from {before}% lines / {branch_before}% branches. "
             "Target the remaining uncovered lines and branches in the next iteration."
         )
-    critic_blockers = [issue for issue in semantic_issues if issue.startswith("critical issue")]
+    critic_blockers = semantic_issues
     if critic_blockers:
-        feedback.append("The critic found a grounded critical/major issue; repair it before acceptance.")
+        feedback.append("The critic found grounded issues in named tests; repair those tests before acceptance.")
     accepted = execution.get("exit_code") == 0 and len(tests) > 0 and score >= threshold and semantic_score is not None and coverage_not_regressed and coverage_goal_met and not critic_blockers
     if semantic_score is None:
         feedback.append("Semantic review was skipped because pytest failures must be repaired first.")
@@ -662,7 +669,7 @@ def critic_node(state: dict[str, Any]) -> dict[str, Any]:
     }
     previous_best = state.get("best_candidate")
     best_candidate = candidate if previous_best is None or _candidate_rank(candidate) > _candidate_rank(previous_best) else previous_best
-    return {"critic_result": result, "critic_feedback": "\n".join(feedback), "accepted": accepted, "best_candidate": best_candidate, "stage": "criticized"}
+    return {"critic_result": result, "critic_feedback": "\n".join(feedback), "critic_repair_targets": critic_repair_targets, "accepted": accepted, "best_candidate": best_candidate, "stage": "criticized"}
 
 
 def finalize_node(state: dict[str, Any]) -> dict[str, Any]:

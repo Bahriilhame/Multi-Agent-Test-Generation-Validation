@@ -35,7 +35,7 @@ def build_generic_generation_prompt(
 ) -> str:
     repair_mode = bool(repair_targets)
     task = (
-        "Generate only replacement pytest functions for these failed tests: "
+        "Generate only corrected replacement pytest functions for these targeted tests: "
         + ", ".join(repair_targets or [])
         + ". Successful generated tests are kept by the workflow; do not regenerate or rename them."
         if repair_mode
@@ -43,7 +43,7 @@ def build_generic_generation_prompt(
     )
     return f"""You are a senior Python test engineer.
 {task}
-Return only Python test code, under 600 tokens. Do not alter production code. On retries, replace or correct every failed generated test identified in the feedback; do not repeat its failing operation or test body unchanged. Treat pytest exceptions as evidence of actual source behavior, and only assert an exception when the test explicitly expects it. Successful generated tests are retained automatically: {", ".join((passing_generated_tests or [])[:20]) or "none yet"}. Do not copy fixtures from existing test modules into this separate generated module; include every import for fixtures you define. Use behavior justified by the source; cover normal, boundary, invalid and exception cases where source semantics support them. Use meaningful assertions, deterministic data and parametrization where useful. Avoid duplicating existing tests. Do not use filesystem, process, network or shell access. Tests must import project code correctly.
+Return only Python test code, under 600 tokens. Do not alter production code. On retries, repair every targeted test according to the pytest failure and critic feedback; do not repeat an incorrect expectation or weak assertion unchanged. Treat pytest exceptions as evidence of actual source behavior, and only assert an exception when the test explicitly expects it. Successful non-targeted generated tests are retained automatically: {", ".join((passing_generated_tests or [])[:20]) or "none yet"}. Do not copy fixtures from existing test modules into this separate generated module; include every import for fixtures you define. Use behavior justified by the source; cover normal, boundary, invalid and exception cases where source semantics support them. Use meaningful assertions, deterministic data and parametrization where useful. Avoid duplicating existing tests. Do not use filesystem, process, network or shell access. Tests must import project code correctly.
 
 Existing tests (avoid duplicating covered behaviors):
 Existing test function names (never repeat these): {", ".join((existing_test_names or [])[:100])}

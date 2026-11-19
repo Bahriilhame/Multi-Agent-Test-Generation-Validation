@@ -54,6 +54,7 @@ class TestingState(TypedDict, total=False):
     baseline_results: dict[str, Any]
     execution_result: dict[str, Any]
     critic_feedback: str
+    critic_repair_targets: list[str]
     accepted: bool
     min_quality_score: float
     run_error: str

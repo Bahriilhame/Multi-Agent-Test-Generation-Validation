@@ -144,6 +144,31 @@ def test_critic_accepts_passing_tests_that_raise_line_or_branch_coverage(monkeyp
     assert result["best_candidate"]["coverage_after"] == 60
 
 
+def test_critic_findings_block_acceptance_and_target_the_next_iteration(monkeypatch):
+    response = json.dumps({
+        "score": 90,
+        "dimensions": {"contract": 25, "assertions": 25, "edge_cases": 20, "independence": 20},
+        "issues": [{
+            "test_name": "test_value",
+            "severity": "major",
+            "evidence": "assert value() == 3",
+            "reason": "Expected value contradicts the source contract.",
+            "suggestion": "Assert the documented value instead.",
+        }],
+        "summary": "Correct the expected value.",
+    })
+    monkeypatch.setattr("agents.generic_pipeline.ask_llm_json", lambda *_args, **_kwargs: response)
+    result = critic_node({
+        "generated_tests": "def test_value():\n    assert value() == 3\n",
+        "execution_result": {"exit_code": 0, "passed": 1, "failed": 0, "errors": 0, "generated_passed": 1, "generated_failed": 0},
+        "coverage_available": False,
+        "min_quality_score": 70,
+    })
+    assert result["accepted"] is False
+    assert result["critic_repair_targets"] == ["test_value"]
+    assert "Expected value contradicts" in result["critic_feedback"]
+
+
 def test_full_coverage_report_skips_generation_as_already_complete(tmp_path):
     result = finalize_node({
         "run_dir": str(tmp_path),
