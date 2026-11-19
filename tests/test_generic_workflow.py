@@ -130,6 +130,8 @@ def test_project_image_auto_installs_declared_and_detected_dependencies(tmp_path
     assert "Flask-SQLAlchemy" in (context / "requirements-auto.txt").read_text(encoding="utf-8")
     dockerfile = (context / "Dockerfile").read_text(encoding="utf-8")
     assert "USER tester" in dockerfile
+    assert "--target=/opt/project-dependencies" in dockerfile
+    assert "PYTHONPATH=/opt/project-dependencies:/app" in dockerfile
     assert "COPY --chown=tester:tester" in dockerfile
     assert len(calls) == 2
 

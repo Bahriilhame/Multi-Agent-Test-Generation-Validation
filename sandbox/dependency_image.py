@@ -12,6 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 BASE_IMAGE = "smarttest-runner:latest"
+IMAGE_BUILDER_VERSION = "project-deps-v2-uid-independent"
 IMPORT_TO_DISTRIBUTION = {
     "PIL": "Pillow",
     "bs4": "beautifulsoup4",
@@ -105,7 +106,8 @@ def build_project_image(
     root = Path(project_root).resolve()
     run = Path(run_dir).resolve()
     dependencies, inferred_modules = _project_dependencies(root, extra_modules)
-    digest = hashlib.sha256("\n".join(sorted(dependencies)).encode()).hexdigest()[:16]
+    digest_source = IMAGE_BUILDER_VERSION + "\n" + "\n".join(sorted(dependencies))
+    digest = hashlib.sha256(digest_source.encode()).hexdigest()[:16]
     image = f"smarttest-project:{digest}"
 
     inspected = subprocess.run(["docker", "image", "inspect", image], capture_output=True, text=True, check=False)
@@ -142,12 +144,14 @@ def build_project_image(
         (context / "requirements-auto.txt").write_text("\n".join(auto_dependencies) + "\n", encoding="utf-8")
     (context / "Dockerfile").write_text(
         f"FROM {BASE_IMAGE}\n"
+        "USER root\n"
+        "RUN mkdir -p /opt/project-dependencies && chown tester:tester /opt/project-dependencies\n"
         "USER tester\n"
-        "ENV PATH=/home/tester/.local/bin:$PATH\n"
+        "ENV PYTHONPATH=/opt/project-dependencies:/app\n"
         "COPY --chown=tester:tester . /tmp/project-requirements/\n"
         "RUN for requirements_file in /tmp/project-requirements/requirements*.txt; do \\\n"
         "      if [ -f \"$requirements_file\" ] && [ -s \"$requirements_file\" ]; then \\\n"
-        "        python -m pip install --user --no-cache-dir -r \"$requirements_file\" || exit $?; \\\n"
+        "        python -m pip install --target=/opt/project-dependencies --no-cache-dir -r \"$requirements_file\" || exit $?; \\\n"
         "      fi; \\\n"
         "    done\n",
         encoding="utf-8",
