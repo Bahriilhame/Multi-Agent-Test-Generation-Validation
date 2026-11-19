@@ -1,7 +1,7 @@
 
 import os
-
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,5 +29,5 @@ OLLAMA_BASE_URL = os.getenv(
 MAX_ITERATIONS = int(os.getenv("SMARTTEST_MAX_ITERATIONS", "2"))
 
 MIN_RELEVANCE_SCORE = float(os.getenv("SMARTTEST_MIN_QUALITY_SCORE", "70"))
-RUNNER_IMAGE = os.getenv("SMARTTEST_DOCKER_IMAGE", "smarttest-runner:latest")
+RUNNER_IMAGE = os.getenv("SMARTTEST_DOCKER_IMAGE", "auto")
 DOCKER_TIMEOUT_SECONDS = int(os.getenv("SMARTTEST_DOCKER_TIMEOUT_SECONDS", "120"))

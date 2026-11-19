@@ -18,7 +18,6 @@ from config.settings import (
     DOCKER_TIMEOUT_SECONDS,
     MAX_ITERATIONS,
     MIN_RELEVANCE_SCORE,
-    RUNNER_IMAGE,
 )
 
 
@@ -34,7 +33,7 @@ def main() -> int:
     run.add_argument("--iterations", type=int, default=MAX_ITERATIONS)
     run.add_argument("--min-quality", type=float, default=MIN_RELEVANCE_SCORE)
     run.add_argument("--timeout", type=int, default=DOCKER_TIMEOUT_SECONDS)
-    run.add_argument("--docker-image", default=RUNNER_IMAGE, help="Docker image with the project's dependencies, pytest and pytest-cov preinstalled")
+    run.add_argument("--docker-image", default=os.getenv("SMARTTEST_DOCKER_IMAGE", "auto"), help="Use auto to build a cached test image from project dependencies, or supply a prebuilt image")
     run.add_argument("--task-statement", type=Path, help="Optional UTF-8 file containing an issue description or task context")
     run.add_argument("--run-id", help=argparse.SUPPRESS)
     args = parser.parse_args()

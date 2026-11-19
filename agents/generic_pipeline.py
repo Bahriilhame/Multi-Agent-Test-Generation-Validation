@@ -7,12 +7,18 @@ import builtins
 import json
 import re
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from adapters import detect_project
 from adapters.python import PythonAdapter
-from sandbox.generic_runner import run_in_docker, summarize_failure_details
+from sandbox.dependency_image import IMPORT_TO_DISTRIBUTION, build_project_image
+from sandbox.generic_runner import (
+    ensure_runner_image,
+    run_in_docker,
+    summarize_failure_details,
+)
 from tools.critic_schema import validate_critic_response
 from tools.llm_client import ask_llm
 from tools.ollama_json import ask_llm_json
@@ -21,15 +27,24 @@ from tools.prompt_templates import (
     build_generic_generation_prompt,
 )
 
-PIP_DISTRIBUTIONS = {
-    "flask_sqlalchemy": "Flask-SQLAlchemy",
-    "bs4": "beautifulsoup4",
-    "PIL": "Pillow",
-    "yaml": "PyYAML",
-    "cv2": "opencv-python",
-    "dotenv": "python-dotenv",
-    "sklearn": "scikit-learn",
-}
+
+def _record_phase(state: dict[str, Any], node: str, status: str, detail: str | None = None) -> None:
+    run_dir = state.get("run_dir")
+    if not run_dir:
+        return
+    folder = Path(run_dir)
+    folder.mkdir(parents=True, exist_ok=True)
+    event = {
+        "timestamp": datetime.now(UTC).isoformat(),
+        "node": node,
+        "status": status,
+        "iteration": int(state.get("iteration", 0)),
+    }
+    if detail:
+        event["detail"] = detail
+    with (folder / "events.jsonl").open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(event, ensure_ascii=False) + "\n")
+        stream.flush()
 
 
 def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
@@ -39,17 +54,73 @@ def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(info.unsupported_reason or f"No executable adapter for {info.languages}")
     adapter = PythonAdapter()
     run_dir = Path(state["run_dir"])
-    baseline = run_in_docker(root, run_dir / "baseline", "", image=state.get("docker_image", "smarttest-runner:latest"))
+    requested_image = state.get("docker_image", "auto")
+    _record_phase(state, "environment", "started", "Détection des dépendances du projet")
+    if requested_image == "auto":
+        _record_phase(state, "dependencies", "started", "Lecture des manifests et imports Python")
+        try:
+            ensure_runner_image()
+            docker_image, inferred_modules = build_project_image(
+                root,
+                run_dir,
+                progress=lambda status, detail, error: _record_phase(
+                    state, "dependencies", status, error or detail
+                ),
+            )
+        except Exception as error:
+            _record_phase(state, "dependencies", "failed", f"{type(error).__name__}: {error}")
+            _record_phase(state, "environment", "failed", f"{type(error).__name__}: {error}")
+            raise
+        environment_detail = f"Image prête : {docker_image}"
+        if inferred_modules:
+            environment_detail += f" · {len(inferred_modules)} import(s) pris en compte"
+        _record_phase(state, "dependencies", "completed", environment_detail)
+    else:
+        docker_image = requested_image
+        inferred_modules = []
+        environment_detail = f"Image personnalisée : {docker_image}"
+    _record_phase(state, "environment", "completed", environment_detail)
+    _record_phase(state, "baseline", "started", "Exécution des tests existants et mesure de couverture")
+    baseline = run_in_docker(root, run_dir / "baseline", "", image=docker_image)
+    missing_dependencies = baseline.get("missing_dependencies", [])
+    if missing_dependencies and requested_image == "auto":
+        _record_phase(
+            state,
+            "baseline",
+            "completed",
+            "Imports dynamiques manquants détectés : " + ", ".join(missing_dependencies),
+        )
+        _record_phase(state, "dependencies", "started", "Résolution automatique des imports manquants")
+        try:
+            docker_image, inferred_modules = build_project_image(
+                root,
+                run_dir,
+                extra_modules=missing_dependencies,
+                progress=lambda status, detail, error: _record_phase(
+                    state, "dependencies", status, error or detail
+                ),
+            )
+        except Exception as error:
+            _record_phase(state, "dependencies", "failed", f"{type(error).__name__}: {error}")
+            raise
+        _record_phase(state, "dependencies", "completed", f"Image mise à jour : {docker_image}")
+        _record_phase(state, "baseline", "started", "Nouvelle exécution après installation des dépendances détectées")
+        baseline = run_in_docker(root, run_dir / "baseline", "", image=docker_image)
+    _record_phase(
+        state,
+        "baseline",
+        "completed" if baseline.get("exit_code") == 0 else "failed",
+        f"{baseline.get('passed', 0)} réussi(s), {baseline.get('failed', 0) + baseline.get('errors', 0)} échec(s)",
+    )
     missing_dependencies = baseline.get("missing_dependencies", [])
     if missing_dependencies:
         names = ", ".join(
-            f"{module} (pip: {PIP_DISTRIBUTIONS[module]})" if module in PIP_DISTRIBUTIONS else module
+            f"{module} (pip: {IMPORT_TO_DISTRIBUTION[module]})" if module in IMPORT_TO_DISTRIBUTION else module
             for module in missing_dependencies
         )
         raise RuntimeError(
-            f"Runner image is missing project dependencies: {names}. Add the package(s) "
-            "to requirements.txt or requirements.extra.txt, build a custom image with "
-            "sandbox/runner/Dockerfile.project, then select that image in the UI."
+            f"Dependencies still missing from the prepared runner image: {names}. "
+            "Check the project dependency manifest or provide a compatible --docker-image."
         )
     coverage = baseline.get("coverage") or {}
     uncovered = []
@@ -88,6 +159,7 @@ def analyze_node(state: dict[str, Any]) -> dict[str, Any]:
         "branch_coverage_before": coverage.get("totals", {}).get("percent_branches_covered", 0),
         "uncovered_details": uncovered, "coverage_before_report": {"totals": coverage.get("totals", {}), "files": coverage.get("files", {})},
         "baseline_results": {k: v for k, v in baseline.items() if k != "output"},
+        "docker_image": docker_image,
         "source_context": adapter.generate_test_context(root, info, limit=12_000),
         "existing_test_files": [str(p.relative_to(root)) for p in test_paths],
         "existing_test_names": sorted(set(existing_test_names)),
