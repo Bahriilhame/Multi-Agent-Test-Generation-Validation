@@ -144,6 +144,8 @@ def run_in_docker(
         "errors": _summary_count(output, "error"),
         "generated_passed": len(re.findall(r"smarttest_generated[\\/]test_generated\.py::.*?\s+PASSED", output)),
         "generated_failed": len(re.findall(r"smarttest_generated[\\/]test_generated\.py::.*?\s+(?:FAILED|ERROR)", output)),
+        "generated_passed_tests": _generated_test_names(output, "PASSED"),
+        "generated_failed_tests": _generated_test_names(output, "FAILED|ERROR"),
         "failure_details": _failure_details(output),
         "missing_dependencies": sorted(set(re.findall(r"No module named ['\"]([^'\"]+)['\"]", output))),
         "duration_seconds": duration,
@@ -161,6 +163,14 @@ def _summary_count(output: str, name: str) -> int:
     noun = "errors?" if name == "error" else re.escape(name)
     found = re.findall(rf"\b(\d+)\s+{noun}\b", output.lower())
     return int(found[-1]) if found else 0
+
+
+def _generated_test_names(output: str, outcome: str) -> list[str]:
+    matches = re.findall(
+        rf"(?m)^smarttest_generated[\\/]test_generated\.py::([^\s]+)\s+(?:{outcome})\b",
+        output,
+    )
+    return sorted({name.split("[", 1)[0] for name in matches})
 
 
 def _failure_details(output: str) -> str:
