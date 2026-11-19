@@ -25,6 +25,8 @@ python platform_cli.py run https://github.com/organisation/projet.git
 
 Sans option supplémentaire, SmartTest-AI construit une image Docker Python propre au projet. Il lit les fichiers `requirements*.txt`, les dépendances standard de `pyproject.toml` et les imports applicatifs manquants; l'image est mise en cache à partir de cette liste. L'installation se fait pendant le build avec l'utilisateur non privilégié `tester`. Le build reçoit uniquement les manifests de dépendances détectés ou générés, pas le dépôt complet. Un gestionnaire ou une dépendance locale non reconnu peut encore demander une adaptation explicite. `--docker-image IMAGE` reste disponible pour fournir une image préconstruite.
 
+La boucle générique recalcule les lignes et branches non couvertes après chaque itération, demande un gain mesurable avant d’accepter l’objectif de couverture, conserve la meilleure itération et répare les tests échoués sans supprimer ceux qui passent. Si les tests de référence passent déjà avec 100 % des lignes et branches mesurées, le run s’arrête avec `coverage_complete` : aucune augmentation n’est possible.
+
 Les résultats, tests générés et journaux vont dans `experiments/projects/<projet>/<run_id>/`. Le score du critique combine une revue sémantique Ollama avec AST et résultat pytest; si Ollama est indisponible, il conserve un score heuristique mais ne marque pas le run accepté. Docker fournit une isolation utile, sans constituer une garantie contre les vulnérabilités du noyau ou du daemon. Les dépendances d'un projet peuvent exécuter du code lors de leur installation; l'image de test reste dédiée au projet et les tests eux-mêmes s'exécutent hors réseau dans le conteneur contraint.
 
 Pour forcer une image personnalisée, fournis son nom à la CLI :

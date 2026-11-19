@@ -65,3 +65,8 @@ class TestingState(TypedDict, total=False):
     source_kind: str
     docker_image: str
     timeout_seconds: int
+    coverage_available: bool
+    coverage_saturated: bool
+    coverage_status: str
+    coverage_goal_met: bool
+    best_candidate: dict[str, Any]
