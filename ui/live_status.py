@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 
 NODE_LABELS = {
+    "environment": "Préparation automatique de l’environnement",
+    "dependencies": "Installation des dépendances du projet",
+    "baseline": "Tests existants et couverture initiale",
     "analyze": "Analyse du projet et couverture initiale",
     "generator": "Génération des tests avec Ollama",
     "validation": "Exécution des tests dans Docker",
@@ -46,6 +49,7 @@ def summarize_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "started_at": None,
             "finished_at": None,
             "error": None,
+            "detail": None,
         })
         status = event.get("status")
         if status == "started":
@@ -55,4 +59,5 @@ def summarize_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
             step["status"] = status
             step["finished_at"] = event.get("timestamp")
             step["error"] = event.get("error")
+            step["detail"] = event.get("detail") or event.get("error")
     return list(steps.values())

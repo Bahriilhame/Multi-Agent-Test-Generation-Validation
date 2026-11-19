@@ -9,6 +9,7 @@ from adapters.input_sources import materialize_source
 from agents.generic_pipeline import _extract_code, analyze_node, critic_node
 from experiments.review_project_run import review as review_project_run
 from graph import generic_workflow
+from sandbox.dependency_image import build_project_image
 from sandbox.generic_runner import (
     _failure_details,
     _summary_count,
@@ -90,14 +91,47 @@ def test_analysis_stops_early_when_runner_image_lacks_project_dependencies(tmp_p
         supported=True, adapter="python",
     )
     monkeypatch.setattr("agents.generic_pipeline.detect_project", lambda _root: info)
+    monkeypatch.setattr("agents.generic_pipeline.ensure_runner_image", lambda: None)
+    built = {}
+    monkeypatch.setattr(
+        "agents.generic_pipeline.build_project_image",
+        lambda *_args, **_kwargs: (built.setdefault("image", "smarttest-project:test") or "smarttest-project:test", ["flask_sqlalchemy"]),
+    )
     monkeypatch.setattr(
         "agents.generic_pipeline.run_in_docker",
         lambda *_args, **_kwargs: {"missing_dependencies": ["flask_sqlalchemy"]},
     )
-    with pytest.raises(RuntimeError, match="missing project dependencies: flask_sqlalchemy") as error:
-        analyze_node({"project_path": str(tmp_path), "run_dir": str(tmp_path / "run")})
-    assert "Flask-SQLAlchemy" in str(error.value)
-    assert "requirements.extra.txt" in str(error.value)
+    with pytest.raises(RuntimeError, match="Dependencies still missing"):
+        analyze_node({"project_path": str(tmp_path), "run_dir": str(tmp_path / "run"), "docker_image": "auto"})
+    assert built["image"] == "smarttest-project:test"
+
+
+def test_project_image_auto_installs_declared_and_detected_dependencies(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "requirements.txt").write_text("Flask>=3\n", encoding="utf-8")
+    (project / "app.py").write_text("from flask_sqlalchemy import SQLAlchemy\n", encoding="utf-8")
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        if command[:3] == ["docker", "image", "inspect"]:
+            return subprocess.CompletedProcess(command, 1, "", "not found")
+        if command[:2] == ["docker", "build"]:
+            return subprocess.CompletedProcess(command, 0, "built", "")
+        raise AssertionError(command)
+
+    monkeypatch.setattr("sandbox.dependency_image.subprocess.run", fake_run)
+    image, inferred = build_project_image(project, tmp_path / "run")
+    assert image.startswith("smarttest-project:")
+    assert "flask_sqlalchemy" in inferred
+    context = tmp_path / "run" / "runtime" / "image-build"
+    assert "Flask>=3" in (context / "requirements.txt").read_text(encoding="utf-8")
+    assert "Flask-SQLAlchemy" in (context / "requirements-auto.txt").read_text(encoding="utf-8")
+    dockerfile = (context / "Dockerfile").read_text(encoding="utf-8")
+    assert "USER tester" in dockerfile
+    assert "COPY --chown=tester:tester" in dockerfile
+    assert len(calls) == 2
 
 
 def test_analysis_passes_existing_test_names_without_copying_test_bodies(tmp_path, monkeypatch):
@@ -111,6 +145,8 @@ def test_analysis_passes_existing_test_names_without_copying_test_bodies(tmp_pat
         source_files=["app.py"], test_files=["test_app.py"], supported=True, adapter="python",
     )
     monkeypatch.setattr("agents.generic_pipeline.detect_project", lambda _root: info)
+    monkeypatch.setattr("agents.generic_pipeline.ensure_runner_image", lambda: None)
+    monkeypatch.setattr("agents.generic_pipeline.build_project_image", lambda *_args, **_kwargs: ("smarttest-project:test", []))
     monkeypatch.setattr(
         "agents.generic_pipeline.run_in_docker",
         lambda *_args, **_kwargs: {"missing_dependencies": [], "coverage": {"totals": {}, "files": {}}},
@@ -119,6 +155,32 @@ def test_analysis_passes_existing_test_names_without_copying_test_bodies(tmp_pat
     assert result["existing_test_names"] == ["test_existing_add"]
     assert "test_app.py: test_existing_add" in result["existing_tests_context"]
     assert "add(1, 2)" not in result["existing_tests_context"]
+
+
+def test_analysis_rebuilds_image_for_missing_dynamic_import(tmp_path, monkeypatch):
+    info = ProjectInfo(root=str(tmp_path), name="dynamic", languages=["Python"], source_files=[], supported=True, adapter="python")
+    monkeypatch.setattr("agents.generic_pipeline.detect_project", lambda _root: info)
+    monkeypatch.setattr("agents.generic_pipeline.ensure_runner_image", lambda: None)
+    build_calls = []
+
+    def build(_root, _run_dir, **kwargs):
+        build_calls.append(kwargs.get("extra_modules"))
+        return f"smarttest-project:run{len(build_calls)}", kwargs.get("extra_modules", [])
+
+    monkeypatch.setattr("agents.generic_pipeline.build_project_image", build)
+    run_calls = []
+
+    def run(_root, _run_dir, _tests, **kwargs):
+        run_calls.append(kwargs["image"])
+        if len(run_calls) == 1:
+            return {"missing_dependencies": ["flask_sqlalchemy"], "exit_code": 1}
+        return {"missing_dependencies": [], "exit_code": 0, "passed": 2, "failed": 0, "errors": 0, "coverage": {"totals": {}, "files": {}}}
+
+    monkeypatch.setattr("agents.generic_pipeline.run_in_docker", run)
+    result = analyze_node({"project_path": str(tmp_path), "run_dir": str(tmp_path / "run"), "docker_image": "auto"})
+    assert build_calls == [None, ["flask_sqlalchemy"]]
+    assert run_calls == ["smarttest-project:run1", "smarttest-project:run2"]
+    assert result["docker_image"] == "smarttest-project:run2"
 
 
 def test_generated_test_code_rejects_process_and_network_imports():

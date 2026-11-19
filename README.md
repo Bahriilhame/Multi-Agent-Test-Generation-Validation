@@ -20,39 +20,24 @@ Un pipeline générique (LangGraph, boucle bornée, Ollama, copie temporaire et 
 ```powershell
 python platform_cli.py run .\chemin\vers\projet --iterations 2
 python platform_cli.py run .\projet.zip --model qwen2.5-coder:7b
-python platform_cli.py run https://github.com/organisation/projet.git --docker-image mon-runner:latest
+python platform_cli.py run https://github.com/organisation/projet.git
 ```
 
-Le runner standard fournit Python, pytest et coverage. Les dépendances applicatives doivent déjà être présentes dans l'image Docker indiquée par `--docker-image`; le système ne lance pas d'installation arbitraire de paquets du projet. Les résultats, tests générés et journaux vont dans `experiments/projects/<projet>/<run_id>/`. Le score du critique combine une revue sémantique Ollama avec AST et résultat pytest; si Ollama est indisponible, il conserve un score heuristique mais ne marque pas le run accepté. Docker fournit une isolation utile, sans constituer une garantie contre les vulnérabilités du noyau ou du daemon.
+Sans option supplémentaire, SmartTest-AI construit une image Docker Python propre au projet. Il lit les fichiers `requirements*.txt`, les dépendances standard de `pyproject.toml` et les imports applicatifs manquants; l'image est mise en cache à partir de cette liste. L'installation se fait pendant le build avec l'utilisateur non privilégié `tester`. Le build reçoit uniquement les manifests de dépendances détectés ou générés, pas le dépôt complet. Un gestionnaire ou une dépendance locale non reconnu peut encore demander une adaptation explicite. `--docker-image IMAGE` reste disponible pour fournir une image préconstruite.
 
-Pour un dépôt Flask ayant un `requirements.txt`, bâtis d'abord l'image de base depuis la racine de SmartTest-AI :
+Les résultats, tests générés et journaux vont dans `experiments/projects/<projet>/<run_id>/`. Le score du critique combine une revue sémantique Ollama avec AST et résultat pytest; si Ollama est indisponible, il conserve un score heuristique mais ne marque pas le run accepté. Docker fournit une isolation utile, sans constituer une garantie contre les vulnérabilités du noyau ou du daemon. Les dépendances d'un projet peuvent exécuter du code lors de leur installation; l'image de test reste dédiée au projet et les tests eux-mêmes s'exécutent hors réseau dans le conteneur contraint.
+
+Pour forcer une image personnalisée, fournis son nom à la CLI :
 
 ```powershell
-docker build -t smarttest-runner:latest -f sandbox/runner/Dockerfile sandbox/runner
+python platform_cli.py run .\chemin\vers\projet --docker-image mon-runner:latest
 ```
 
-Ajoute ensuite ce `Dockerfile` à la racine du dépôt Flask et bâtis son image :
-
-```dockerfile
-FROM smarttest-runner:latest
-USER root
-COPY requirements.txt /tmp/project-requirements.txt
-RUN pip install --no-cache-dir -r /tmp/project-requirements.txt
-USER tester
-```
-
-```powershell
-docker build -t flasktasks-runner .
-python platform_cli.py run https://github.com/organisation/flasktasks.git --docker-image flasktasks-runner
-```
-
-Le fichier réutilisable `sandbox/runner/Dockerfile.project` installe `requirements.txt` et tout `requirements*.txt` présent dans le contexte. Cela permet aussi d'ajouter un `requirements.extra.txt` si le dépôt a oublié une dépendance. Par exemple, le module Python `flask_sqlalchemy` provient du paquet pip `Flask-SQLAlchemy`.
-
-Dans l'interface, saisis `flasktasks-runner` dans le champ de l'image Docker. L'analyse s'arrête avec le nom des modules manquants si l'image ne contient pas les dépendances nécessaires.
+L'interface suit le cycle de vie réel : préparation de l'image, tests de référence, analyse, génération, validation Docker et critique, avec durée de l'étape active, numéro d'itération et erreurs associées. Un long appel Ollama reste identifié comme génération en cours.
 
 Pour recalculer la décision après mise à jour des règles du critique, sans rappeler le modèle ni réexécuter les tests : `python -m experiments.review_project_run --run-dir experiments/projects/<projet>/<run_id>`. Cette commande écrit `critic_result_v2.json` sans modifier le rapport d'origine; ajoute `--response-file <fichier>` si la réponse brute a été conservée sous un autre nom.
 
-Projets de démonstration indépendants : `demos/python_functions`, `demos/python_modules`, `demos/flask_api`, `demos/low_coverage` et `demos/edge_cases`. Flask nécessite une image bâtie avec son `Dockerfile` avant l'exécution (`docker build -t smarttest-flask-demo demos/flask_api`, puis `--docker-image smarttest-flask-demo`).
+Projets de démonstration indépendants : `demos/python_functions`, `demos/python_modules`, `demos/flask_api`, `demos/low_coverage` et `demos/edge_cases`.
 
 Interface locale (dépendance facultative) :
 
@@ -61,7 +46,7 @@ python -m pip install -r requirements-ui.txt
 streamlit run ui/app.py
 ```
 
-L'interface prend un chemin local, une archive ZIP ou une URL Git, permet de choisir Ollama, le nombre de cycles, le timeout, le seuil de pertinence et l'image Docker, puis affiche les résultats et rapports.
+L'interface prend un chemin local, un dossier sélectionné, une archive ZIP ou une URL Git, permet de choisir Ollama, le nombre d'itérations, le timeout et le seuil de pertinence, puis affiche les résultats et rapports.
 
 ## SWE-bench Lite
 

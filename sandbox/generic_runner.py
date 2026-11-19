@@ -17,6 +17,20 @@ from adapters.base import IGNORED_DIRS
 EXCLUDED_FILES = {".env", ".env.local", ".env.production", "secrets.json", "id_rsa", ".npmrc", ".pypirc", "credentials", "credentials.json"}
 
 
+def ensure_runner_image(image: str = "smarttest-runner:latest") -> None:
+    """Build the platform's reusable base image once when Docker lacks it."""
+    available = subprocess.run(["docker", "image", "inspect", image], check=False, capture_output=True, text=True)
+    if available.returncode == 0:
+        return
+    dockerfile = Path(__file__).resolve().parent / "runner" / "Dockerfile"
+    build = subprocess.run(
+        ["docker", "build", "-t", image, "-f", str(dockerfile), str(dockerfile.parent)],
+        check=False, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600,
+    )
+    if build.returncode:
+        raise RuntimeError("Docker image build failed:\n" + (build.stdout + build.stderr)[-5000:])
+
+
 def _copy_project(source: Path, destination: Path, excluded_root: Path) -> None:
     destination.mkdir(parents=True, exist_ok=False)
     for current, dirs, files in os.walk(source, followlinks=False):
@@ -78,13 +92,7 @@ def run_in_docker(
     )
 
     if image == "smarttest-runner:latest":
-        dockerfile = Path(__file__).resolve().parent / "runner" / "Dockerfile"
-        build = subprocess.run(
-            ["docker", "build", "-t", image, "-f", str(dockerfile), str(dockerfile.parent)],
-            check=False, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600,
-        )
-        if build.returncode:
-            raise RuntimeError("Docker image build failed:\n" + (build.stdout + build.stderr)[-5000:])
+        ensure_runner_image(image)
     else:
         available = subprocess.run(["docker", "image", "inspect", image], check=False, capture_output=True, text=True)
         if available.returncode:

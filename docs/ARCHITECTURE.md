@@ -18,7 +18,7 @@ The graph state carries the resolved project information, chosen adapter, source
 
 `ProjectAdapter` defines project detection, coverage, test discovery, context preparation, test execution and result collection. `detect_project()` recognizes Python, JavaScript, TypeScript and Java plus common package managers/configurations and frameworks. Only `PythonAdapter` is executable. Unsupported primary languages are reported without routing their code through the Python runner.
 
-The Python runner stages a disposable source copy and a separately generated test module. It omits Git metadata, virtual environments, common secret files and links. It measures application coverage while omitting test files. Application dependencies must already exist in the chosen image; runtime package installation is intentionally avoided. Missing Python modules in baseline pytest output stop the run early with a Docker image build hint.
+The Python runner stages a disposable source copy and a separately generated test module. It omits Git metadata, virtual environments, common secret files and links. It measures application coverage while omitting test files. The default workflow builds a cached project image from `requirements*.txt`, static dependencies in `pyproject.toml`, and inferred third-party imports. The build context contains dependency manifests only, and dependency installation runs as the unprivileged `tester` user. Tests then run in the offline constrained container. Local/editable dependencies and unsupported build backends can still require a prebuilt image supplied with `--docker-image`.
 
 ## Four agents
 
@@ -31,7 +31,7 @@ The critic score is a review aid, not a proof of assertion strength. Mutation te
 
 ## Isolation boundary
 
-Project Python and generated tests execute only inside Docker. The host process reads source text and invokes Docker CLI, but does not import or run project modules. The runtime container receives no network, Docker socket, host environment variables or writable project mount. Docker still relies on its daemon and host kernel; a Docker escape remains a platform risk. A custom image should contain only the project dependencies and pytest tools required for the run.
+Project dependencies are installed into a dedicated Docker image during image construction; package build hooks may execute code as the unprivileged image user, so dependencies should still be treated as project-controlled code. Project Python and generated tests execute only inside Docker. The host process reads source text and invokes Docker CLI, but does not import or run project modules. The test container receives no network, Docker socket, host environment variables or writable project mount. Docker still relies on its daemon and host kernel; a Docker escape remains a platform risk.
 
 ZIP extraction checks for traversal, symlinks, file-count limits and a 1 GB uncompressed size cap. Git sources are cloned without submodules; their files are staged with the same link and secret exclusions.
 

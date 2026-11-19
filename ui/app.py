@@ -6,7 +6,9 @@ import json
 import os
 import subprocess
 import sys
+import time
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
 import streamlit as st
@@ -15,22 +17,19 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ui.live_status import read_events, summarize_events
+from ui.live_status import NODE_LABELS, read_events, summarize_events
 
 st.set_page_config(page_title="SmartTest-AI", page_icon="🧪", layout="wide")
 st.title("SmartTest-AI")
-st.caption("Analyse, génère et valide des tests Python dans un conteneur Docker isolé.")
+st.caption("Analyse et améliore automatiquement les tests de projets Python dans un environnement Docker isolé.")
 
 with st.sidebar:
     model = st.text_input("Modèle Ollama", value=os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b"))
     iterations = st.slider("Nombre maximum d'itérations", 1, 5, 2)
     timeout = st.number_input("Timeout des tests (secondes)", min_value=10, max_value=1800, value=120)
-    docker_image = st.text_input(
-        "Image Docker (pytest et dépendances préinstallés)",
-        value="smarttest-runner:latest",
-        help="L'image doit contenir aussi les dépendances du projet. Pour Flask, crée une image dérivée de smarttest-runner:latest et installe le requirements.txt du projet.",
-    )
     min_score = st.slider("Score minimal d'acceptation", 0, 100, 70)
+
+st.info("L’image de test est construite automatiquement depuis les dépendances déclarées et les imports Python détectés. Les projets non Python sont détectés, mais leur adaptateur d’exécution n’est pas encore disponible.")
 
 source_mode = st.radio("Projet", ["Dossier local", "Dossier sélectionné", "Archive ZIP", "Dépôt Git"], horizontal=True)
 source_value = ""
@@ -69,12 +68,12 @@ if st.button("Lancer l'analyse", type="primary", disabled=not source_value or ac
     run_id = uuid.uuid4().hex
     cmd = [sys.executable, str(ROOT / "platform_cli.py"), "run", source_value,
            "--model", model, "--iterations", str(iterations), "--timeout", str(int(timeout)),
-           "--min-quality", str(min_score), "--docker-image", docker_image, "--run-id", run_id]
+           "--min-quality", str(min_score), "--docker-image", "auto", "--run-id", run_id]
     log_path = ROOT / "experiments" / "ui_logs" / f"{run_id}.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("w", encoding="utf-8") as log_file:
         process = subprocess.Popen(cmd, cwd=ROOT, stdout=log_file, stderr=subprocess.STDOUT)
-    st.session_state["active_run"] = {"process": process, "run_id": run_id, "log_path": str(log_path)}
+    st.session_state["active_run"] = {"process": process, "run_id": run_id, "log_path": str(log_path), "max_iterations": iterations, "started_monotonic": time.monotonic()}
     st.session_state.pop("last_run", None)
     st.rerun()
 
@@ -128,23 +127,62 @@ def render_live_run() -> None:
         st.session_state.pop("active_run", None)
         st.rerun()
 
-    st.subheader("Progression du workflow")
+    st.subheader("Cycle de vie du workflow")
     if not steps:
-        st.info("Préparation du projet (copie locale, extraction ZIP ou clonage Git)…")
-        st.progress(0, text="Préparation du projet")
+        st.info("Préparation du projet : copie locale, extraction ZIP ou clonage Git…")
         return
 
     current = next((step for step in reversed(steps) if step["status"] == "running"), None)
+    elapsed_total = max(0, int(time.monotonic() - active.get("started_monotonic", time.monotonic())))
+    elapsed_text = f"{elapsed_total // 60} min {elapsed_total % 60:02d} s"
     if current:
-        iteration_text = f" — itération {current['iteration'] + 1}" if current["node"] in {"generator", "validation", "critic"} else ""
-        st.info(f"Étape en cours : **{current['label']}**{iteration_text}")
-    completed = sum(step["status"] in {"completed", "failed"} for step in steps)
-    st.progress(min(1.0, completed / max(1, len(steps))), text=f"{completed} étape(s) terminée(s)")
-    for step in steps:
+        iteration_text = f" · itération {current['iteration'] + 1}" if current["node"] in {"generator", "validation", "critic"} else ""
+        started = current.get("started_at")
+        phase_elapsed = ""
+        if started:
+            try:
+                seconds = max(0, int((datetime.now(UTC) - datetime.fromisoformat(started)).total_seconds()))
+                phase_elapsed = f" · depuis {seconds // 60} min {seconds % 60:02d} s"
+            except ValueError:
+                pass
+        st.info(f"En cours : **{current['label']}**{iteration_text}{phase_elapsed} · durée totale {elapsed_text}")
+    else:
+        latest = steps[-1]
+        if process.poll() is None:
+            st.info(f"Transition vers la prochaine phase · dernière phase : **{latest['label']}** · durée totale {elapsed_text}")
+
+    by_key = {(step["node"], step["iteration"]): step for step in steps}
+
+    def phase_line(node: str, iteration: int = 0) -> str:
+        step = by_key.get((node, iteration))
+        if not step:
+            return f"⏳ {NODE_LABELS[node]}"
         marker = {"completed": "✅", "running": "🔄", "failed": "❌", "pending": "⏳"}[step["status"]]
-        iteration_text = f" · itération {step['iteration'] + 1}" if step["node"] in {"generator", "validation", "critic"} else ""
-        detail = f" — {step['error']}" if step.get("error") else ""
-        st.write(f"{marker} {step['label']}{iteration_text}{detail}")
+        detail = f" — {step['detail']}" if step.get("detail") else ""
+        if step.get("started_at") and step.get("finished_at"):
+            try:
+                seconds = max(0, int((datetime.fromisoformat(step["finished_at"]) - datetime.fromisoformat(step["started_at"])).total_seconds()))
+                detail += f" · {seconds // 60} min {seconds % 60:02d} s"
+            except ValueError:
+                pass
+        return f"{marker} {NODE_LABELS[node]}{detail}"
+
+    st.markdown("#### Démarrage et analyse")
+    st.write(phase_line("environment"))
+    st.write(phase_line("dependencies"))
+    st.write(phase_line("baseline"))
+    st.write(phase_line("analyze"))
+    max_iterations = int(active.get("max_iterations", 1))
+    observed_iterations = max((step["iteration"] for step in steps if step["node"] in {"generator", "validation", "critic"}), default=-1) + 1
+    count = max(1, observed_iterations, max_iterations if process.poll() is None else observed_iterations)
+    for iteration in range(count):
+        st.markdown(f"#### Itération {iteration + 1}" + (f" / {max_iterations}" if process.poll() is None else ""))
+        columns = st.columns(3)
+        for column, node in zip(columns, ("generator", "validation", "critic")):
+            column.markdown(phase_line(node, iteration))
+        if iteration in {step["iteration"] for step in steps if step["node"] == "retry"}:
+            st.caption(f"↻ Critique terminée : préparation de l’itération {iteration + 2}")
+    st.write(phase_line("finalize"))
 
 
 if st.session_state.get("active_run"):
